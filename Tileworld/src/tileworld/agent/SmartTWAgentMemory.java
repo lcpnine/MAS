@@ -1,7 +1,10 @@
 package tileworld.agent;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import sim.engine.Schedule;
 import sim.util.Bag;
 import sim.util.Int2D;
@@ -37,6 +40,18 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
     private final TWEntity[][] rememberedEntities;
     private final double[][] observationTimes;
 
+    // Shared entity tracking (from communication, can't create real TWTile/TWHole)
+    // 0 = none, 1 = tile, 2 = hole
+    private final int[][] sharedEntityType;
+
+    // Claimed targets by other agents: key="x,y", value=claim time
+    private final HashMap<String, Double> claimedTargets = new HashMap<String, Double>();
+
+    // New discoveries this step (for broadcasting in communicate())
+    private final ArrayList<Int2D> newTiles = new ArrayList<Int2D>();
+    private final ArrayList<Int2D> newHoles = new ArrayList<Int2D>();
+    private final ArrayList<Int2D> goneEntities = new ArrayList<Int2D>();
+
     // Exploration tracking — when did we last visit/see each cell
     private final double[][] lastVisitedTime;
 
@@ -49,6 +64,7 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
 
         this.rememberedEntities = new TWEntity[x][y];
         this.observationTimes = new double[x][y];
+        this.sharedEntityType = new int[x][y];
         this.lastVisitedTime = new double[x][y];
 
         // Initialize all observation times to -1 (never seen)
@@ -82,6 +98,11 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
             }
         }
 
+        // Clear discovery lists for this step
+        newTiles.clear();
+        newHoles.clear();
+        goneEntities.clear();
+
         // Scan sensed objects for fuel stations and update parallel arrays
         for (int i = 0; i < sensedObjects.size(); i++) {
             Object obj = sensedObjects.get(i);
@@ -91,7 +112,17 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
             }
             if (obj instanceof TWObject) {
                 TWEntity e = (TWEntity) obj;
+                // Track new discoveries for broadcasting
+                if (rememberedEntities[e.getX()][e.getY()] == null
+                        && sharedEntityType[e.getX()][e.getY()] == 0) {
+                    if (e instanceof TWTile) {
+                        newTiles.add(new Int2D(e.getX(), e.getY()));
+                    } else if (e instanceof TWHole) {
+                        newHoles.add(new Int2D(e.getX(), e.getY()));
+                    }
+                }
                 rememberedEntities[e.getX()][e.getY()] = e;
+                sharedEntityType[e.getX()][e.getY()] = 0; // direct observation supersedes shared
                 observationTimes[e.getX()][e.getY()] = now;
             }
         }
@@ -115,7 +146,9 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
                         }
                     }
                     if (!stillThere) {
+                        goneEntities.add(new Int2D(cx, cy));
                         rememberedEntities[cx][cy] = null;
+                        sharedEntityType[cx][cy] = 0;
                         observationTimes[cx][cy] = -1;
                     }
                 }
@@ -140,15 +173,26 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
 
         for (int x = 0; x < xDim; x++) {
             for (int y = 0; y < yDim; y++) {
-                if (rememberedEntities[x][y] != null && observationTimes[x][y] >= 0) {
+                if (observationTimes[x][y] >= 0) {
                     double age = now - observationTimes[x][y];
                     if (age >= lifetime) {
-                        rememberedEntities[x][y] = null;
+                        if (rememberedEntities[x][y] != null) {
+                            rememberedEntities[x][y] = null;
+                            removeAgentPercept(x, y);
+                        }
+                        sharedEntityType[x][y] = 0;
                         observationTimes[x][y] = -1;
-                        // Sync with parent's state
-                        removeAgentPercept(x, y);
                     }
                 }
+            }
+        }
+
+        // Decay old claims
+        Iterator<Map.Entry<String, Double>> it = claimedTargets.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, Double> entry = it.next();
+            if (now - entry.getValue() >= lifetime) {
+                it.remove();
             }
         }
     }
@@ -296,4 +340,136 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
 
     public int getXDim() { return xDim; }
     public int getYDim() { return yDim; }
+
+    // ---- Communication support ----
+
+    public void setFuelStation(int x, int y) {
+        if (fuelStationPos == null) {
+            fuelStationPos = new Int2D(x, y);
+        }
+    }
+
+    public void addSharedTile(int x, int y, double time) {
+        if (!isInBounds(x, y)) return;
+        // Only update if we don't already have a direct observation here
+        if (rememberedEntities[x][y] == null) {
+            sharedEntityType[x][y] = 1;
+            // Only update time if newer
+            if (time > observationTimes[x][y]) {
+                observationTimes[x][y] = time;
+            }
+        }
+    }
+
+    public void addSharedHole(int x, int y, double time) {
+        if (!isInBounds(x, y)) return;
+        if (rememberedEntities[x][y] == null) {
+            sharedEntityType[x][y] = 2;
+            if (time > observationTimes[x][y]) {
+                observationTimes[x][y] = time;
+            }
+        }
+    }
+
+    public void removeSharedEntity(int x, int y) {
+        if (!isInBounds(x, y)) return;
+        rememberedEntities[x][y] = null;
+        sharedEntityType[x][y] = 0;
+        observationTimes[x][y] = -1;
+        removeAgentPercept(x, y);
+    }
+
+    // ---- Claim tracking ----
+
+    public void addClaim(int x, int y, double time) {
+        claimedTargets.put(x + "," + y, time);
+    }
+
+    public void clearAllClaims() {
+        claimedTargets.clear();
+    }
+
+    public boolean isClaimed(int x, int y) {
+        return claimedTargets.containsKey(x + "," + y);
+    }
+
+    // ---- Position-based queries (combines sensed + shared) ----
+
+    public List<Int2D> getAllTilePositions() {
+        List<Int2D> tiles = new ArrayList<Int2D>();
+        double now = schedule.getTime();
+        for (int x = 0; x < xDim; x++) {
+            for (int y = 0; y < yDim; y++) {
+                if (observationTimes[x][y] < 0) continue;
+                double age = now - observationTimes[x][y];
+                if (age >= Parameters.lifeTime) continue;
+                if (rememberedEntities[x][y] instanceof TWTile || sharedEntityType[x][y] == 1) {
+                    tiles.add(new Int2D(x, y));
+                }
+            }
+        }
+        return tiles;
+    }
+
+    public List<Int2D> getAllHolePositions() {
+        List<Int2D> holes = new ArrayList<Int2D>();
+        double now = schedule.getTime();
+        for (int x = 0; x < xDim; x++) {
+            for (int y = 0; y < yDim; y++) {
+                if (observationTimes[x][y] < 0) continue;
+                double age = now - observationTimes[x][y];
+                if (age >= Parameters.lifeTime) continue;
+                if (rememberedEntities[x][y] instanceof TWHole || sharedEntityType[x][y] == 2) {
+                    holes.add(new Int2D(x, y));
+                }
+            }
+        }
+        return holes;
+    }
+
+    public Int2D getClosestTilePosition() {
+        List<Int2D> tiles = getAllTilePositions();
+        Int2D closest = null;
+        double minDist = Double.MAX_VALUE;
+        for (Int2D t : tiles) {
+            double d = Math.abs(t.x - me.getX()) + Math.abs(t.y - me.getY());
+            if (d < minDist) {
+                minDist = d;
+                closest = t;
+            }
+        }
+        return closest;
+    }
+
+    public Int2D getClosestHolePosition() {
+        return getClosestHolePosition(me.getX(), me.getY());
+    }
+
+    public Int2D getClosestHolePosition(int fromX, int fromY) {
+        List<Int2D> holes = getAllHolePositions();
+        Int2D closest = null;
+        double minDist = Double.MAX_VALUE;
+        for (Int2D h : holes) {
+            double d = Math.abs(h.x - fromX) + Math.abs(h.y - fromY);
+            if (d < minDist) {
+                minDist = d;
+                closest = h;
+            }
+        }
+        return closest;
+    }
+
+    // ---- Discovery lists for communication ----
+
+    public ArrayList<Int2D> getNewTiles() { return newTiles; }
+    public ArrayList<Int2D> getNewHoles() { return newHoles; }
+    public ArrayList<Int2D> getGoneEntities() { return goneEntities; }
+
+    public void removeObject(TWEntity entity) {
+        if (entity != null && isInBounds(entity.getX(), entity.getY())) {
+            rememberedEntities[entity.getX()][entity.getY()] = null;
+            sharedEntityType[entity.getX()][entity.getY()] = 0;
+            observationTimes[entity.getX()][entity.getY()] = -1;
+        }
+    }
 }
