@@ -1,6 +1,7 @@
 package tileworld.agent;
 
 import java.awt.Color;
+import java.util.ArrayList;
 import sim.display.GUIState;
 import sim.portrayal.Inspector;
 import sim.portrayal.LocationWrapper;
@@ -51,6 +52,11 @@ public class SmartTWAgent extends TWAgent {
     private boolean shiftGoingDown;
     private static final int LAWNMOWER_STEP = 7;
 
+    // Zone-based exploration
+    private int zoneStartX, zoneEndX, zoneStartY, zoneEndY;
+    private boolean zoneExplored = false;
+
+
     public SmartTWAgent(String name, int xpos, int ypos, TWEnvironment env, double fuelLevel) {
         super(xpos, ypos, env, fuelLevel);
         this.name = name;
@@ -64,13 +70,109 @@ public class SmartTWAgent extends TWAgent {
         int maxSearch = env.getxDimension() + env.getyDimension();
         this.pathGenerator = new AstarPathGenerator(env, this, maxSearch);
 
-        // Sweep toward the CLOSER horizontal edge first (less fuel waste on first half-row)
-        this.sweepGoingRight = (xpos >= env.getxDimension() / 2);
-        // Shift toward the FURTHER vertical edge (covers more ground before reversing)
-        this.shiftGoingDown = (ypos < env.getyDimension() / 2);
+        // Zone assignment: 3 columns x 2 rows for agents 1-6
+        int agentIndex = 0;
+        try {
+            agentIndex = Integer.parseInt(name.replace("agent", "")) - 1;
+        } catch (NumberFormatException e) {
+            agentIndex = 0;
+        }
+        int col = agentIndex % 3;
+        int row = agentIndex / 3;
+        int colWidth = env.getxDimension() / 3;
+        int rowHeight = env.getyDimension() / 2;
+        zoneStartX = col * colWidth;
+        zoneEndX = (col == 2) ? env.getxDimension() - 1 : (col + 1) * colWidth - 1;
+        zoneStartY = row * rowHeight;
+        zoneEndY = (row == 1) ? env.getyDimension() - 1 : (row + 1) * rowHeight - 1;
+
+        // Sweep toward closer zone edge first
+        int zoneMidX = (zoneStartX + zoneEndX) / 2;
+        int zoneMidY = (zoneStartY + zoneEndY) / 2;
+        this.sweepGoingRight = (xpos >= zoneMidX);
+        this.shiftGoingDown = (ypos < zoneMidY);
 
         // Phase 2: goal-directed planner
         this.planner = new SmartTWPlanner(this, this.smartMemory, this.pathGenerator);
+    }
+
+    @Override
+    public void communicate() {
+        double now = getEnvironment().schedule.getTime();
+
+        // 1. Read and process messages from other agents
+        smartMemory.clearAllClaims();
+        ArrayList<Message> messages = getEnvironment().getMessages();
+        for (Message msg : messages) {
+            if (msg.getFrom().equals(name)) continue; // skip own messages
+            String content = msg.getMessage();
+            if (content == null) continue;
+
+            int colonIdx = content.indexOf(':');
+            if (colonIdx < 0) continue;
+            String type = content.substring(0, colonIdx);
+            String payload = content.substring(colonIdx + 1);
+
+            try {
+                if ("FUEL".equals(type)) {
+                    String[] parts = payload.split(",");
+                    int fx = Integer.parseInt(parts[0]);
+                    int fy = Integer.parseInt(parts[1]);
+                    smartMemory.setFuelStation(fx, fy);
+                } else if ("TILE".equals(type)) {
+                    String[] parts = payload.split(",");
+                    int tx = Integer.parseInt(parts[0]);
+                    int ty = Integer.parseInt(parts[1]);
+                    double time = Double.parseDouble(parts[2]);
+                    smartMemory.addSharedTile(tx, ty, time);
+                } else if ("HOLE".equals(type)) {
+                    String[] parts = payload.split(",");
+                    int hx = Integer.parseInt(parts[0]);
+                    int hy = Integer.parseInt(parts[1]);
+                    double time = Double.parseDouble(parts[2]);
+                    smartMemory.addSharedHole(hx, hy, time);
+                } else if ("GONE".equals(type)) {
+                    String[] parts = payload.split(",");
+                    int gx = Integer.parseInt(parts[0]);
+                    int gy = Integer.parseInt(parts[1]);
+                    smartMemory.removeSharedEntity(gx, gy);
+                } else if ("CLAIM".equals(type)) {
+                    String[] parts = payload.split(",");
+                    int cx = Integer.parseInt(parts[0]);
+                    int cy = Integer.parseInt(parts[1]);
+                    smartMemory.addClaim(cx, cy, now);
+                }
+            } catch (Exception e) {
+                // Malformed message, skip
+            }
+        }
+
+        // 2. Broadcast fuel station location
+        if (smartMemory.isFuelStationKnown()) {
+            Int2D fp = smartMemory.getKnownFuelStation();
+            sendMsg("FUEL:" + fp.x + "," + fp.y);
+        }
+
+        // 3. Broadcast new tile/hole sightings and gone positions
+        for (Int2D t : smartMemory.getNewTiles()) {
+            sendMsg("TILE:" + t.x + "," + t.y + "," + now);
+        }
+        for (Int2D h : smartMemory.getNewHoles()) {
+            sendMsg("HOLE:" + h.x + "," + h.y + "," + now);
+        }
+        for (Int2D g : smartMemory.getGoneEntities()) {
+            sendMsg("GONE:" + g.x + "," + g.y);
+        }
+
+        // 4. Broadcast current planner target as claim
+        Int2D goal = planner.getCurrentGoal();
+        if (goal != null) {
+            sendMsg("CLAIM:" + goal.x + "," + goal.y);
+        }
+    }
+
+    private void sendMsg(String content) {
+        getEnvironment().receiveMessage(new Message(name, "", content));
     }
 
     @Override
@@ -213,8 +315,8 @@ public class SmartTWAgent extends TWAgent {
         if (smartMemory.isFuelStationKnown()) {
             Int2D fuelPos = smartMemory.getKnownFuelStation();
             int manhattanDist = Math.abs(getX() - fuelPos.x) + Math.abs(getY() - fuelPos.y);
-            // 1.5x for obstacle detours + 30 buffer for replanning overhead
-            return (int)(manhattanDist * 1.5) + 30;
+            // 2.0x for obstacle detours + 40 buffer for replanning overhead
+            return (int)(manhattanDist * 2.0) + 40;
         } else {
             // Unknown fuel station — very conservative
             return (int)(Parameters.defaultFuelLevel * 0.5);
@@ -273,12 +375,17 @@ public class SmartTWAgent extends TWAgent {
         int xDim = smartMemory.getXDim();
         int yDim = smartMemory.getYDim();
 
+        // Use zone boundaries when zone not yet explored, full grid otherwise
+        int sweepMinX = zoneExplored ? 1 : zoneStartX;
+        int sweepMaxX = zoneExplored ? xDim - 2 : zoneEndX;
+        int sweepMinY = zoneExplored ? 0 : zoneStartY;
+        int sweepMaxY = zoneExplored ? yDim - 1 : zoneEndY;
+
         if (sweepState == SweepState.HORIZONTAL) {
             TWDirection moveDir = sweepGoingRight ? TWDirection.E : TWDirection.W;
 
-            // Check if we've reached the edge we're sweeping toward
-            boolean atTargetEdge = (sweepGoingRight && getX() >= xDim - 2)
-                                || (!sweepGoingRight && getX() <= 1);
+            boolean atTargetEdge = (sweepGoingRight && getX() >= sweepMaxX)
+                                || (!sweepGoingRight && getX() <= sweepMinX);
             if (atTargetEdge) {
                 sweepState = SweepState.SHIFTING;
                 sweepGoingRight = !sweepGoingRight;
@@ -286,9 +393,7 @@ public class SmartTWAgent extends TWAgent {
                 return sweepStep();
             }
 
-            // Normal horizontal movement
             if (canMove(moveDir)) return moveDir;
-            // Obstacle — try to go around vertically (prefer shift direction)
             TWDirection detour = shiftGoingDown ? TWDirection.S : TWDirection.N;
             if (canMove(detour)) return detour;
             detour = shiftGoingDown ? TWDirection.N : TWDirection.S;
@@ -296,9 +401,14 @@ public class SmartTWAgent extends TWAgent {
             return getRandomSafeDirection();
         }
 
-        // SHIFTING state: move vertically by LAWNMOWER_STEP cells, reversing at edges
         if (sweepState == SweepState.SHIFTING) {
             if (shiftRemaining <= 0) {
+                // Check if zone exploration is complete
+                if (!zoneExplored && getY() >= sweepMaxY && shiftGoingDown) {
+                    zoneExplored = true;
+                } else if (!zoneExplored && getY() <= sweepMinY && !shiftGoingDown) {
+                    zoneExplored = true;
+                }
                 sweepState = SweepState.HORIZONTAL;
                 return sweepStep();
             }
@@ -306,13 +416,17 @@ public class SmartTWAgent extends TWAgent {
             TWDirection shiftDir = shiftGoingDown ? TWDirection.S : TWDirection.N;
             int ny = getY() + shiftDir.dy;
 
-            // Hit vertical edge — reverse direction
-            if (!getEnvironment().isInBounds(getX(), ny)) {
+            // Hit boundary — reverse direction
+            boolean hitBoundary = !getEnvironment().isInBounds(getX(), ny)
+                    || (!zoneExplored && (ny > sweepMaxY || ny < sweepMinY));
+            if (hitBoundary) {
+                if (!zoneExplored) {
+                    zoneExplored = true; // reached zone edge, switch to full grid
+                }
                 shiftGoingDown = !shiftGoingDown;
                 shiftDir = shiftGoingDown ? TWDirection.S : TWDirection.N;
                 ny = getY() + shiftDir.dy;
                 if (!getEnvironment().isInBounds(getX(), ny)) {
-                    // Stuck at corner — go horizontal
                     sweepState = SweepState.HORIZONTAL;
                     return sweepStep();
                 }
@@ -322,7 +436,6 @@ public class SmartTWAgent extends TWAgent {
                 shiftRemaining--;
                 return shiftDir;
             }
-            // Obstacle during shift — try horizontal to get around
             TWDirection detour = sweepGoingRight ? TWDirection.E : TWDirection.W;
             if (canMove(detour)) return detour;
             return getRandomSafeDirection();

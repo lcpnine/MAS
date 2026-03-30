@@ -6,8 +6,6 @@ import tileworld.Parameters;
 import tileworld.agent.SmartTWAgent;
 import tileworld.agent.SmartTWAgentMemory;
 import tileworld.environment.TWDirection;
-import tileworld.environment.TWHole;
-import tileworld.environment.TWTile;
 
 /**
  * SmartTWPlanner — Phase 2 goal-directed planner for SmartTWAgent.
@@ -45,22 +43,24 @@ public class SmartTWPlanner implements TWPlanner {
 
     /**
      * Plan to deliver a carried tile to the nearest affordable hole.
-     * "Affordable" means the agent can reach the hole and still get back to fuel.
+     * Skips holes claimed by other agents.
      */
     public TWPath planToHole() {
         voidPlan();
         Int2D fuelPos = memory.getKnownFuelStation();
-        List<TWHole> holes = memory.getAllRememberedHoles();
+        List<Int2D> holes = memory.getAllHolePositions();
         if (holes.isEmpty()) return null;
 
-        TWHole bestHole = null;
+        Int2D bestHole = null;
         double bestDist = Double.MAX_VALUE;
 
-        for (TWHole hole : holes) {
-            int costToHole = manhattan(agent.getX(), agent.getY(), hole.getX(), hole.getY());
+        for (Int2D hole : holes) {
+            if (memory.isClaimed(hole.x, hole.y)) continue;
+
+            int costToHole = manhattan(agent.getX(), agent.getY(), hole.x, hole.y);
             int costHoleToFuel = (fuelPos != null)
-                    ? manhattan(hole.getX(), hole.getY(), fuelPos.x, fuelPos.y)
-                    : 25; // estimate if fuel unknown
+                    ? manhattan(hole.x, hole.y, fuelPos.x, fuelPos.y)
+                    : 25;
 
             int totalCost = costToHole + costHoleToFuel;
             boolean affordable = agent.getFuelLevel() > totalCost * 1.5 + 30;
@@ -74,10 +74,10 @@ public class SmartTWPlanner implements TWPlanner {
 
         if (bestHole == null) return null;
 
-        TWPath path = pathGenerator.findPath(agent.getX(), agent.getY(), bestHole.getX(), bestHole.getY());
+        TWPath path = pathGenerator.findPath(agent.getX(), agent.getY(), bestHole.x, bestHole.y);
         if (path != null && path.hasNext()) {
             currentPath = path;
-            currentGoal = new Int2D(bestHole.getX(), bestHole.getY());
+            currentGoal = new Int2D(bestHole.x, bestHole.y);
             goalType = "hole";
             return path;
         }
@@ -86,45 +86,43 @@ public class SmartTWPlanner implements TWPlanner {
 
     /**
      * Plan to pick up the best affordable tile.
-     * "Affordable" means the agent has enough fuel for the round trip:
-     * agent -> tile -> nearest hole -> fuel station.
+     * Skips tiles claimed by other agents.
      */
     public TWPath planToTile() {
         voidPlan();
-        List<TWTile> tiles = memory.getAllRememberedTiles();
+        List<Int2D> tiles = memory.getAllTilePositions();
         if (tiles.isEmpty()) return null;
 
         Int2D fuelPos = memory.getKnownFuelStation();
-        if (fuelPos == null) return null; // can't estimate fuel cost without fuel station
+        if (fuelPos == null) return null;
 
-        TWTile bestTile = null;
+        Int2D bestTile = null;
         double bestScore = Double.MAX_VALUE;
 
-        for (TWTile tile : tiles) {
-            int costToTile = manhattan(agent.getX(), agent.getY(), tile.getX(), tile.getY());
+        for (Int2D tile : tiles) {
+            if (memory.isClaimed(tile.x, tile.y)) continue;
 
-            // Estimate cost from tile to nearest hole (or default if no holes known)
-            TWHole nearestHole = memory.getClosestRememberedHole(tile.getX(), tile.getY());
+            int costToTile = manhattan(agent.getX(), agent.getY(), tile.x, tile.y);
+
+            Int2D nearestHole = memory.getClosestHolePosition(tile.x, tile.y);
             int costTileToHole;
             int holeX, holeY;
             if (nearestHole != null) {
-                costTileToHole = manhattan(tile.getX(), tile.getY(), nearestHole.getX(), nearestHole.getY());
-                holeX = nearestHole.getX();
-                holeY = nearestHole.getY();
+                costTileToHole = manhattan(tile.x, tile.y, nearestHole.x, nearestHole.y);
+                holeX = nearestHole.x;
+                holeY = nearestHole.y;
             } else {
-                costTileToHole = 20; // estimated average
-                holeX = tile.getX();
-                holeY = tile.getY();
+                costTileToHole = 20;
+                holeX = tile.x;
+                holeY = tile.y;
             }
 
             int costHoleToFuel = manhattan(holeX, holeY, fuelPos.x, fuelPos.y);
             int totalCost = costToTile + costTileToHole + costHoleToFuel;
 
-            // Check if the round trip is affordable with safety margin
             boolean affordable = agent.getFuelLevel() > totalCost * 1.5 + 30;
             if (!affordable) continue;
 
-            // Score by distance to tile (prefer closer tiles)
             if (costToTile < bestScore) {
                 bestScore = costToTile;
                 bestTile = tile;
@@ -133,10 +131,10 @@ public class SmartTWPlanner implements TWPlanner {
 
         if (bestTile == null) return null;
 
-        TWPath path = pathGenerator.findPath(agent.getX(), agent.getY(), bestTile.getX(), bestTile.getY());
+        TWPath path = pathGenerator.findPath(agent.getX(), agent.getY(), bestTile.x, bestTile.y);
         if (path != null && path.hasNext()) {
             currentPath = path;
-            currentGoal = new Int2D(bestTile.getX(), bestTile.getY());
+            currentGoal = new Int2D(bestTile.x, bestTile.y);
             goalType = "tile";
             return path;
         }

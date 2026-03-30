@@ -109,14 +109,14 @@ public class TWEnvironment extends SimState implements Steppable {
         schedule.scheduleRepeating(this, 1, 1.0);
         
         //Now we create some agents
-        Int2D pos = this.generateRandomLocation();
-        createAgent(new SmartTWAgent("agent1", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
-        pos = this.generateRandomLocation();
-        createAgent(new SmartTWAgent("agent2", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        for (int i = 1; i <= 6; i++) {
+            Int2D pos = this.generateRandomLocation();
+            createAgent(new SmartTWAgent("agent" + i, pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        }
         
 //        
         //create the fueling station
-        pos = this.generateRandomLocation();
+        Int2D pos = this.generateRandomLocation();
         fuelingStation = new TWFuelStation(pos.getX(), pos.getY(),this);
 
 
