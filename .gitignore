@@ -1,0 +1,79 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+
+# IDE / Editor
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+**/*.iml
+
+# Claude Code
+.claude/
+.claude-cache/
+.claude-output/
+
+# omc
+.omc/
+.omc-cache/
+.omc-output/
+
+# Java / Build
+*.class
+*.jar
+*.war
+*.ear
+target/
+build/
+out/
+.gradle/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Logs
+*.log
+
+# Dependencies
+lib/*.jar
+!lib/MASON_14.jar
+node_modules/
+.next/
+dist/
+
+# Environment / Secrets
+.env
+.env.*
+*.key
+*.pem
+
+# Temporary / Cache
+tmp/
+temp/
+.cache/
+
+# Data
+data/
+*.npy
+*.index
+
+# Misc
+*.swp
+*.swo
