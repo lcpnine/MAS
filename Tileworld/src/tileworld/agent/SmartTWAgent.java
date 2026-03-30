@@ -14,6 +14,7 @@ import tileworld.environment.TWHole;
 import tileworld.environment.TWTile;
 import tileworld.exceptions.CellBlockedException;
 import tileworld.planners.AstarPathGenerator;
+import tileworld.planners.SmartTWPlanner;
 import tileworld.planners.TWPath;
 import tileworld.planners.TWPathStep;
 
@@ -25,14 +26,17 @@ import tileworld.planners.TWPathStep;
  * 2. REFUEL — if standing on fuel station and not full
  * 3. OPPORTUNISTIC DROP — standing on hole while carrying tile
  * 4. OPPORTUNISTIC PICKUP — standing on tile while carrying < 3
- * 5. EXPLORE — systematic lawnmower pattern to cover the grid
- * 6. WAIT — no valid action
+ * 5. DELIVER — carrying tile, navigate to remembered hole via planner
+ * 6. SEEK TILE — not full, navigate to affordable remembered tile via planner
+ * 7. EXPLORE — systematic lawnmower pattern to cover the grid
+ * 8. WAIT — no valid action
  */
 public class SmartTWAgent extends TWAgent {
 
     private final String name;
     private SmartTWAgentMemory smartMemory;
     private AstarPathGenerator pathGenerator;
+    private SmartTWPlanner planner;
 
     // Current path being followed
     private TWPath currentPath;
@@ -64,6 +68,9 @@ public class SmartTWAgent extends TWAgent {
         this.sweepGoingRight = (xpos >= env.getxDimension() / 2);
         // Shift toward the FURTHER vertical edge (covers more ground before reversing)
         this.shiftGoingDown = (ypos < env.getyDimension() / 2);
+
+        // Phase 2: goal-directed planner
+        this.planner = new SmartTWPlanner(this, this.smartMemory, this.pathGenerator);
     }
 
     @Override
@@ -90,6 +97,7 @@ public class SmartTWAgent extends TWAgent {
 
         // 2. FUEL EMERGENCY — navigate to fuel station (MUST return, never fall through)
         if (isFuelEmergency()) {
+            planner.voidPlan(); // cancel any tile/hole seeking
             if (!"fuel".equals(currentGoalType)) {
                 voidCurrentPath();
             }
@@ -121,13 +129,46 @@ public class SmartTWAgent extends TWAgent {
             }
         }
 
-        // 5. EXPLORE — systematic coverage with persistent target
+        // 5. DELIVER — carrying tile, seek hole via planner
+        if (hasTile()) {
+            // Void planner if it's pursuing a tile (we already have one, prioritize delivery)
+            if ("tile".equals(planner.getGoalType())) {
+                planner.voidPlan();
+            }
+            // Try existing hole plan or generate new one
+            if (!planner.hasPlan() || !"hole".equals(planner.getGoalType())) {
+                planner.planToHole();
+            }
+            if (planner.hasPlan()) {
+                TWDirection planDir = planner.execute();
+                if (planDir != null) {
+                    return new TWThought(TWAction.MOVE, planDir);
+                }
+            }
+            // No hole in memory — fall through to explore
+        }
+
+        // 6. SEEK TILE — not full, seek affordable tile via planner
+        if (carriedTiles.size() < 3) {
+            if (!planner.hasPlan() || !"tile".equals(planner.getGoalType())) {
+                planner.planToTile();
+            }
+            if (planner.hasPlan()) {
+                TWDirection planDir = planner.execute();
+                if (planDir != null) {
+                    return new TWThought(TWAction.MOVE, planDir);
+                }
+            }
+            // No affordable tile — fall through to explore
+        }
+
+        // 7. EXPLORE — systematic coverage with persistent target
         TWDirection dir = exploreDirection();
         if (dir != null) {
             return new TWThought(TWAction.MOVE, dir);
         }
 
-        // 6. WAIT
+        // 8. WAIT
         return new TWThought(TWAction.MOVE, TWDirection.Z);
     }
 
@@ -352,6 +393,10 @@ public class SmartTWAgent extends TWAgent {
     @Override
     public String getName() {
         return name;
+    }
+
+    public int getCarriedTileCount() {
+        return carriedTiles.size();
     }
 
     public SmartTWAgentMemory getSmartMemory() {
