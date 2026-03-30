@@ -77,3 +77,6 @@ data/
 # Misc
 *.swp
 *.swo
+
+# Docs
+*.ko.md
