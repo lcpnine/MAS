@@ -51,6 +51,11 @@ public class SmartTWPlanner implements TWPlanner {
         List<Int2D> holes = memory.getAllHolePositions();
         if (holes.isEmpty()) return null;
 
+        // Adaptive affordability based on environment
+        double affordMult = memory.isShortLifetime() ? 1.3 : 1.5;
+        int affordBuffer = memory.isShortLifetime() ? 20 : 30;
+        int maxDist = memory.isShortLifetime() ? (int)(Parameters.lifeTime * 0.6) : Integer.MAX_VALUE;
+
         Int2D bestHole = null;
         double bestDist = Double.MAX_VALUE;
 
@@ -58,12 +63,14 @@ public class SmartTWPlanner implements TWPlanner {
             if (memory.isClaimed(hole.x, hole.y)) continue;
 
             int costToHole = manhattan(agent.getX(), agent.getY(), hole.x, hole.y);
+            if (costToHole > maxDist) continue;
+
             int costHoleToFuel = (fuelPos != null)
                     ? manhattan(hole.x, hole.y, fuelPos.x, fuelPos.y)
                     : 25;
 
             int totalCost = costToHole + costHoleToFuel;
-            boolean affordable = agent.getFuelLevel() > totalCost * 1.5 + 30;
+            boolean affordable = agent.getFuelLevel() > totalCost * affordMult + affordBuffer;
             if (!affordable) continue;
 
             if (costToHole < bestDist) {
@@ -96,6 +103,11 @@ public class SmartTWPlanner implements TWPlanner {
         Int2D fuelPos = memory.getKnownFuelStation();
         if (fuelPos == null) return null;
 
+        // Adaptive affordability based on environment
+        double affordMult = memory.isShortLifetime() ? 1.3 : 1.5;
+        int affordBuffer = memory.isShortLifetime() ? 20 : 30;
+        int maxDist = memory.isShortLifetime() ? (int)(Parameters.lifeTime * 0.6) : Integer.MAX_VALUE;
+
         Int2D bestTile = null;
         double bestScore = Double.MAX_VALUE;
 
@@ -103,6 +115,7 @@ public class SmartTWPlanner implements TWPlanner {
             if (memory.isClaimed(tile.x, tile.y)) continue;
 
             int costToTile = manhattan(agent.getX(), agent.getY(), tile.x, tile.y);
+            if (costToTile > maxDist) continue;
 
             Int2D nearestHole = memory.getClosestHolePosition(tile.x, tile.y);
             int costTileToHole;
@@ -120,11 +133,13 @@ public class SmartTWPlanner implements TWPlanner {
             int costHoleToFuel = manhattan(holeX, holeY, fuelPos.x, fuelPos.y);
             int totalCost = costToTile + costTileToHole + costHoleToFuel;
 
-            boolean affordable = agent.getFuelLevel() > totalCost * 1.5 + 30;
+            boolean affordable = agent.getFuelLevel() > totalCost * affordMult + affordBuffer;
             if (!affordable) continue;
 
-            if (costToTile < bestScore) {
-                bestScore = costToTile;
+            // Hole proximity scoring: only in dense environments where holes are plentiful
+            double score = memory.isDense() ? costToTile + 0.5 * costTileToHole : costToTile;
+            if (score < bestScore) {
+                bestScore = score;
                 bestTile = tile;
             }
         }
@@ -159,6 +174,27 @@ public class SmartTWPlanner implements TWPlanner {
         if (currentGoal != null && agent.getX() == currentGoal.x && agent.getY() == currentGoal.y) {
             voidPlan();
             return null; // arrived — let think() handle pickup/putdown
+        }
+
+        // Dynamic replanning: switch to significantly closer target (dense envs only)
+        if (memory.isDense() && currentGoal != null) {
+            int currentDist = manhattan(agent.getX(), agent.getY(), currentGoal.x, currentGoal.y);
+            if (currentDist > 6) { // only replan if current target isn't already close
+                Int2D closer = null;
+                if ("tile".equals(goalType)) {
+                    closer = memory.getClosestTilePosition();
+                } else if ("hole".equals(goalType)) {
+                    closer = memory.getClosestHolePosition();
+                }
+                if (closer != null && !memory.isClaimed(closer.x, closer.y)
+                        && (closer.x != currentGoal.x || closer.y != currentGoal.y)) {
+                    int newDist = manhattan(agent.getX(), agent.getY(), closer.x, closer.y);
+                    if (newDist * 3 < currentDist) { // >66% closer to avoid thrashing
+                        voidPlan();
+                        return null; // trigger replan in think()
+                    }
+                }
+            }
         }
 
         TWPathStep step = currentPath.popNext();
