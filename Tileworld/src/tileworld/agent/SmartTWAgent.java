@@ -263,7 +263,7 @@ public class SmartTWAgent extends TWAgent {
 
         // 5. TILE BATCHING — if carrying < 3 tiles, pick up nearby tile before
         // delivering (dense only)
-        if (smartMemory.isDense() && hasTile() && carriedTiles.size() < 3) {
+        if (smartMemory.isDense() && !smartMemory.isShortLifetime() && hasTile() && carriedTiles.size() < 3) {
             Int2D nearbyTile = findNearbyTile(5);
             if (nearbyTile != null && isAffordableDetour(nearbyTile)) {
                 if (!"tile".equals(planner.getGoalType())
