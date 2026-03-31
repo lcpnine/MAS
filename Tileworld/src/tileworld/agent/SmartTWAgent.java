@@ -60,7 +60,7 @@ public class SmartTWAgent extends TWAgent {
     private int zoneStartX, zoneEndX, zoneStartY, zoneEndY;
     private boolean zoneExplored = false;
 
-    public SmartTWAgent(String name, int xpos, int ypos, TWEnvironment env, double fuelLevel) {
+    public SmartTWAgent(String name, int xpos, int ypos, TWEnvironment env, double fuelLevel, int agentIndex) {
         super(xpos, ypos, env, fuelLevel);
         this.name = name;
 
@@ -73,13 +73,7 @@ public class SmartTWAgent extends TWAgent {
         int maxSearch = env.getxDimension() + env.getyDimension();
         this.pathGenerator = new AstarPathGenerator(env, this, maxSearch);
 
-        // Zone assignment: 3 columns x 2 rows for agents 1-6
-        int agentIndex = 0;
-        try {
-            agentIndex = Integer.parseInt(name.replace("agent", "")) - 1;
-        } catch (NumberFormatException e) {
-            agentIndex = 0;
-        }
+        // Zone assignment: 3 columns x 2 rows for agents 0-5
         int col = agentIndex % 3;
         int row = agentIndex / 3;
         int colWidth = env.getxDimension() / 3;

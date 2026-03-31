@@ -15,6 +15,12 @@ import sim.util.Int2D;
 import tileworld.Parameters;
 import tileworld.TWGUI;
 import tileworld.agent.Message;
+import tileworld.agent.AdityaAgent;
+import tileworld.agent.YutaekAgent;
+import tileworld.agent.AnanyaAgent;
+import tileworld.agent.MateAgent;
+import tileworld.agent.TwissaAgent;
+import tileworld.agent.NikAgent;
 import tileworld.agent.SimpleTWAgent;
 import tileworld.agent.SmartTWAgent;
 import tileworld.agent.TWAgent;
@@ -109,14 +115,23 @@ public class TWEnvironment extends SimState implements Steppable {
         schedule.scheduleRepeating(this, 1, 1.0);
         
         //Now we create some agents
-        for (int i = 1; i <= 6; i++) {
-            Int2D pos = this.generateRandomLocation();
-            createAgent(new SmartTWAgent("agent" + i, pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
-        }
+        Int2D pos;
+        pos = this.generateRandomLocation();
+        createAgent(new AdityaAgent("Aditya", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        pos = this.generateRandomLocation();
+        createAgent(new YutaekAgent("Yutaek", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        pos = this.generateRandomLocation();
+        createAgent(new AnanyaAgent("Ananya", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        pos = this.generateRandomLocation();
+        createAgent(new MateAgent("Mate", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        pos = this.generateRandomLocation();
+        createAgent(new TwissaAgent("Twissa", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        pos = this.generateRandomLocation();
+        createAgent(new NikAgent("Nik", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
         
 //        
         //create the fueling station
-        Int2D pos = this.generateRandomLocation();
+        pos = this.generateRandomLocation();
         fuelingStation = new TWFuelStation(pos.getX(), pos.getY(),this);
 
 
