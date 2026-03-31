@@ -3,6 +3,7 @@ package tileworld.planners;
 import java.util.List;
 
 import sim.util.Int2D;
+import tileworld.Parameters;
 import tileworld.agent.SmartTWAgent;
 import tileworld.agent.SmartTWAgentMemory;
 import tileworld.environment.TWDirection;
@@ -60,6 +61,8 @@ public class SmartTWPlanner implements TWPlanner {
         Int2D bestHole = null;
         double bestDist = Double.MAX_VALUE;
 
+        double currentTime = agent.getEnvironment().schedule.getTime();
+
         for (Int2D hole : holes) {
             if (memory.isClaimed(hole.x, hole.y))
                 continue;
@@ -67,6 +70,15 @@ public class SmartTWPlanner implements TWPlanner {
             int costToHole = manhattan(agent.getX(), agent.getY(), hole.x, hole.y);
             if (costToHole > maxDist)
                 continue;
+
+            // Skip holes that will likely expire before we arrive
+            double obsTime = memory.getObservationTime(hole.x, hole.y);
+            if (obsTime >= 0) {
+                double age = currentTime - obsTime;
+                double remaining = Parameters.lifeTime - age;
+                if (costToHole > remaining * 0.8)
+                    continue;
+            }
 
             int costHoleToFuel = (fuelPos != null)
                     ? manhattan(hole.x, hole.y, fuelPos.x, fuelPos.y)
@@ -118,6 +130,8 @@ public class SmartTWPlanner implements TWPlanner {
         Int2D bestTile = null;
         double bestScore = Double.MAX_VALUE;
 
+        double currentTime = agent.getEnvironment().schedule.getTime();
+
         for (Int2D tile : tiles) {
             if (memory.isClaimed(tile.x, tile.y))
                 continue;
@@ -133,6 +147,15 @@ public class SmartTWPlanner implements TWPlanner {
                 costTileToHole = manhattan(tile.x, tile.y, nearestHole.x, nearestHole.y);
                 holeX = nearestHole.x;
                 holeY = nearestHole.y;
+
+                // Skip if the hole will likely expire before the full trip completes
+                double holeObsTime = memory.getObservationTime(holeX, holeY);
+                if (holeObsTime >= 0) {
+                    double holeAge = currentTime - holeObsTime;
+                    double holeRemaining = Parameters.lifeTime - holeAge;
+                    if ((costToTile + costTileToHole) > holeRemaining * 0.8)
+                        continue;
+                }
             } else {
                 costTileToHole = 20;
                 holeX = tile.x;
@@ -209,8 +232,18 @@ public class SmartTWPlanner implements TWPlanner {
             }
         }
 
-        TWPathStep step = currentPath.popNext();
-        return step.getDirection();
+        // Check if next step is blocked before committing
+        TWPathStep step = currentPath.peekNext();
+        TWDirection dir = step.getDirection();
+        int nx = agent.getX() + dir.dx;
+        int ny = agent.getY() + dir.dy;
+        if (agent.getEnvironment().isCellBlocked(nx, ny)) {
+            voidPlan();
+            return null;
+        }
+
+        currentPath.popNext();
+        return dir;
     }
 
     @Override

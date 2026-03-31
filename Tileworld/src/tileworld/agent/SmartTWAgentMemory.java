@@ -216,6 +216,16 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
             Map.Entry<String, Double> entry = it.next();
             if (now - entry.getValue() >= lifetime) {
                 it.remove();
+            } else {
+                // Remove stale claims where the object no longer exists in memory
+                String[] parts = entry.getKey().split(",");
+                int cx = Integer.parseInt(parts[0]);
+                int cy = Integer.parseInt(parts[1]);
+                if (isInBounds(cx, cy)
+                        && rememberedEntities[cx][cy] == null
+                        && sharedEntityType[cx][cy] == 0) {
+                    it.remove();
+                }
             }
         }
     }
@@ -517,6 +527,15 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
             sharedEntityType[entity.getX()][entity.getY()] = 0;
             observationTimes[entity.getX()][entity.getY()] = -1;
         }
+    }
+
+    // ---- Observation time access ----
+
+    public double getObservationTime(int x, int y) {
+        if (isInBounds(x, y)) {
+            return observationTimes[x][y];
+        }
+        return -1;
     }
 
     // ---- Environment profile (runtime observation-based detection) ----

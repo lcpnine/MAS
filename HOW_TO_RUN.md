@@ -94,6 +94,9 @@ java -cp Tileworld/bin:lib/MASON_14.jar tileworld.TileworldMain
 - Tile batching in dense environments
 - Dynamic replanning for closer targets
 - Adaptive lawnmower step size
+- Path validity checking before execution (avoids wasted steps on newly blocked cells)
+- Stale claim cleanup when claimed objects disappear from memory
+- Hole lifetime validation to skip holes/tiles that will expire before the agent arrives
 
 ## Running Without Checkout (Isolated)
 

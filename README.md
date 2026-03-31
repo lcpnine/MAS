@@ -113,7 +113,7 @@ where `tileavail(h)` sums twice the distance from each of the *n* nearest tiles 
 6. **Explore** — Move toward unexplored regions, prioritising the agent's assigned zone.
 7. **Wait** — If no productive action exists, conserve fuel.
 
-**Reactivity:** Before executing any planned step, verify the target still exists in memory. If the target tile or hole has expired (exceeded its lifetime) or has been invalidated by a teammate message, abandon the plan and re-evaluate from rule 1.
+**Reactivity:** Before executing any planned step, verify the target still exists in memory. If the target tile or hole has expired (exceeded its lifetime) or has been invalidated by a teammate message, abandon the plan and re-evaluate from rule 1. Additionally, path validity is checked before each move — if the next cell on the A* path is now blocked by a new obstacle, the plan is voided and replanning is triggered immediately instead of wasting a step on a `CellBlockedException`. Hole lifetime is also validated during planning: candidates whose estimated remaining lifetime is too short relative to travel cost are skipped, avoiding wasted trips in volatile environments like Config 2.
 
 **Commitment vs. reactivity tradeoff:** Pollack & Ringuette's Experiment 2 showed that in slower environments, less filtering (more willingness to reconsider plans) yielded better results. In faster environments, the benefit of filtering was ambiguous. For Config 1 (slow, stable), lean toward cautious replanning. For Config 2 (fast, volatile), lean toward committing to short plans and finishing them.
 

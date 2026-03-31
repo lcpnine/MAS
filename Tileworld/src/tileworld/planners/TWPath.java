@@ -157,6 +157,14 @@ public class TWPath {
     }
 
     /**
+     * Peek at the next step without consuming it.
+     * @return the next step, or null if path is empty
+     */
+    public TWPathStep peekNext() {
+        return this.path.peekFirst();
+    }
+
+    /**
      * Used for executing the path, removes and returns the first step in the plan.
      * @return
      */
