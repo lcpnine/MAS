@@ -88,7 +88,7 @@ java -cp Tileworld/bin:lib/MASON_14.jar tileworld.TileworldMain
 ```
 
 **What it adds:**
-- Runtime environment detection (dense/sparse, large/small grid, short/long lifetime)
+- Observation-based environment detection (density from avg objects per sensor step, lifetime from disappearance tracking, grid size from actual environment dimensions) — no hardcoded `Parameters` reads for classification
 - Adaptive fuel safety margins
 - Opportunistic refueling near fuel stations
 - Tile batching in dense environments

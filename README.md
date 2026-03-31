@@ -189,7 +189,7 @@ The `SAFETY_MARGIN` should account for obstacles that may lengthen the actual pa
 | **Communication value** | Moderate — fewer sightings to share | High — rapid discovery-sharing prevents wasted trips |
 | **Exploration priority** | Higher — objects are rare, must find them | Lower — objects are everywhere, focus on delivery |
 
-Consider detecting the configuration at runtime by observing the grid size and object spawn rate in the first few hundred steps, then adjusting thresholds accordingly.
+Our agents detect the configuration at runtime using observation-based classification rather than reading `Parameters` directly (which would fail for Config 3). Density is estimated by averaging objects seen per sensor step (threshold: >8.0 = dense). Object lifetime is estimated by tracking how long observed objects persist before disappearing (threshold: <50 = short). Grid size is read from the actual environment dimensions. During a warmup period (~30 steps for density, ~5 disappearances for lifetime), agents default to conservative sparse/long-lifetime behavior.
 
 ---
 
