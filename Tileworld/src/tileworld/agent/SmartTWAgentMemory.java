@@ -544,11 +544,16 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
         if (senseStepCount < 30)
             return false; // warmup: assume sparse
         double avgObjectsPerStep = (double) totalObjectsSensed / senseStepCount;
-        return avgObjectsPerStep > 8.0;
+        // Normalize by grid coverage: sensor sees (2*range+1)^2 cells out of xDim*yDim
+        int sensorSide = 2 * Parameters.defaultSensorRange + 1;
+        double sensorArea = sensorSide * sensorSide;
+        double gridArea = xDim * yDim;
+        double normalizedDensity = avgObjectsPerStep * (gridArea / sensorArea);
+        return normalizedDensity > 50.0;
     }
 
     public boolean isShortLifetime() {
-        if (objectDisappearances < 5)
+        if (objectDisappearances < 2)
             return false; // warmup: assume long lifetime
         double avgLifetime = (double) totalObservedLifetime / objectDisappearances;
         return avgLifetime < 50;

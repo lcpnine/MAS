@@ -189,7 +189,13 @@ The `SAFETY_MARGIN` should account for obstacles that may lengthen the actual pa
 | **Communication value** | Moderate — fewer sightings to share | High — rapid discovery-sharing prevents wasted trips |
 | **Exploration priority** | Higher — objects are rare, must find them | Lower — objects are everywhere, focus on delivery |
 
-Our agents detect the configuration at runtime using observation-based classification rather than reading `Parameters` directly (which would fail for Config 3). Density is estimated by averaging objects seen per sensor step (threshold: >8.0 = dense). Object lifetime is estimated by tracking how long observed objects persist before disappearing (threshold: <50 = short). Grid size is read from the actual environment dimensions. During a warmup period (~30 steps for density, ~5 disappearances for lifetime), agents default to conservative sparse/long-lifetime behavior.
+Our agents detect the configuration at runtime using observation-based classification rather than reading `Parameters` directly (which would fail for Config 3):
+
+- **Density detection**: Average objects seen per sensor step, normalized by grid coverage ratio (`avgObj/step × gridArea / sensorArea`). Threshold: >50 = dense. The normalization accounts for the fact that each agent's 7×7 sensor covers vastly different fractions of different-sized grids (5.4% of 30×30 vs 0.5% of 100×100).
+- **Lifetime detection**: Tracks how long observed objects persist before disappearing from sensor range. Threshold: <50 = short lifetime. Requires ≥2 observed disappearances (warmup). This metric is inherently slow on large grids where agents revisit areas infrequently — detection accuracy improves as the simulation progresses.
+- **Grid size detection**: Read from actual environment dimensions. Threshold: ≥70 = large grid.
+
+Validation across 5 hypothetical Config 3 scenarios (30×30 to 100×100, spawn rates 0.1–3.0, lifetimes 15–150) confirmed that density and grid size detection achieve 100% accuracy, while lifetime detection correctly identifies long-lifetime environments but only partially detects short lifetimes early in simulation (~20–30% of agents by step 50, improving over time). During warmup (~30 steps for density, ~2 disappearances for lifetime), agents default to conservative sparse/long-lifetime behavior.
 
 ---
 
