@@ -472,4 +472,18 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
             observationTimes[entity.getX()][entity.getY()] = -1;
         }
     }
+
+    // ---- Environment profile (runtime detection for Config 3 adaptability) ----
+
+    public boolean isDense() {
+        return Parameters.tileMean >= 1.0;
+    }
+
+    public boolean isShortLifetime() {
+        return Parameters.lifeTime <= 50;
+    }
+
+    public boolean isLargeGrid() {
+        return Parameters.xDimension >= 70;
+    }
 }

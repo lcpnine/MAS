@@ -50,7 +50,7 @@ public class SmartTWAgent extends TWAgent {
     private boolean sweepGoingRight;
     private int shiftRemaining = 0;
     private boolean shiftGoingDown;
-    private static final int LAWNMOWER_STEP = 7;
+    private final int LAWNMOWER_STEP;
 
     // Zone-based exploration
     private int zoneStartX, zoneEndX, zoneStartY, zoneEndY;
@@ -86,11 +86,19 @@ public class SmartTWAgent extends TWAgent {
         zoneStartY = row * rowHeight;
         zoneEndY = (row == 1) ? env.getyDimension() - 1 : (row + 1) * rowHeight - 1;
 
+        // On large grids, skip zone exploration for faster fuel station discovery
+        if (env.getxDimension() >= 70) {
+            this.zoneExplored = true;
+        }
+
         // Sweep toward closer zone edge first
         int zoneMidX = (zoneStartX + zoneEndX) / 2;
         int zoneMidY = (zoneStartY + zoneEndY) / 2;
         this.sweepGoingRight = (xpos >= zoneMidX);
         this.shiftGoingDown = (ypos < zoneMidY);
+
+        // Adaptive lawnmower step: tighter sweep in dense environments
+        this.LAWNMOWER_STEP = (Parameters.tileMean >= 1.0) ? 5 : 7;
 
         // Phase 2: goal-directed planner
         this.planner = new SmartTWPlanner(this, this.smartMemory, this.pathGenerator);
@@ -179,8 +187,12 @@ public class SmartTWAgent extends TWAgent {
     protected TWThought think() {
         boolean fuelKnown = smartMemory.isFuelStationKnown();
 
-        // 0. FUEL STATION UNKNOWN — focus entirely on finding it
+        // 0. FUEL STATION UNKNOWN — explore to find it, but conserve fuel if low
         if (!fuelKnown) {
+            // On large grids, conserve fuel when low to wait for FUEL broadcasts
+            if (smartMemory.isLargeGrid() && fuelLevel < Parameters.defaultFuelLevel * 0.35) {
+                return new TWThought(TWAction.MOVE, TWDirection.Z);
+            }
             TWDirection dir = exploreGreedy();
             if (dir != null) {
                 return new TWThought(TWAction.MOVE, dir);
@@ -231,7 +243,37 @@ public class SmartTWAgent extends TWAgent {
             }
         }
 
-        // 5. DELIVER — carrying tile, seek hole via planner
+        // 4.5 OPPORTUNISTIC REFUEL — near fuel station and fuel < 70%
+        if (fuelLevel < Parameters.defaultFuelLevel * 0.7) {
+            Int2D fp = smartMemory.getKnownFuelStation();
+            if (fp != null) {
+                int distToFuel = Math.abs(getX() - fp.x) + Math.abs(getY() - fp.y);
+                if (distToFuel <= 3 && distToFuel > 0) {
+                    TWDirection dir = navigateTo(fp.x, fp.y, "fuel");
+                    if (dir != null) {
+                        return new TWThought(TWAction.MOVE, dir);
+                    }
+                }
+            }
+        }
+
+        // 5. TILE BATCHING — if carrying < 3 tiles, pick up nearby tile before delivering (dense only)
+        if (smartMemory.isDense() && hasTile() && carriedTiles.size() < 3) {
+            Int2D nearbyTile = findNearbyTile(5);
+            if (nearbyTile != null && isAffordableDetour(nearbyTile)) {
+                if (!"tile".equals(planner.getGoalType())
+                        || planner.getCurrentGoal() == null
+                        || (planner.getCurrentGoal().x != nearbyTile.x || planner.getCurrentGoal().y != nearbyTile.y)) {
+                    planner.voidPlan();
+                }
+                TWDirection dir = navigateTo(nearbyTile.x, nearbyTile.y, "batch");
+                if (dir != null) {
+                    return new TWThought(TWAction.MOVE, dir);
+                }
+            }
+        }
+
+        // 6. DELIVER — carrying tile, seek hole via planner
         if (hasTile()) {
             // Void planner if it's pursuing a tile (we already have one, prioritize delivery)
             if ("tile".equals(planner.getGoalType())) {
@@ -315,8 +357,12 @@ public class SmartTWAgent extends TWAgent {
         if (smartMemory.isFuelStationKnown()) {
             Int2D fuelPos = smartMemory.getKnownFuelStation();
             int manhattanDist = Math.abs(getX() - fuelPos.x) + Math.abs(getY() - fuelPos.y);
-            // 2.0x for obstacle detours + 40 buffer for replanning overhead
-            return (int)(manhattanDist * 2.0) + 40;
+            // Large grid + dense obstacles: need extra margin for detours
+            if (smartMemory.isLargeGrid()) {
+                return (int)(manhattanDist * 2.5) + 50;
+            } else {
+                return (int)(manhattanDist * 2.0) + 40;
+            }
         } else {
             // Unknown fuel station — very conservative
             return (int)(Parameters.defaultFuelLevel * 0.5);
@@ -495,6 +541,43 @@ public class SmartTWAgent extends TWAgent {
             if (canMove(d)) return d;
         }
         return TWDirection.Z;
+    }
+
+    /**
+     * Find the closest unclaimed tile within maxDist manhattan distance.
+     */
+    private Int2D findNearbyTile(int maxDist) {
+        java.util.List<Int2D> tiles = smartMemory.getAllTilePositions();
+        Int2D best = null;
+        int bestDist = maxDist + 1;
+        for (Int2D t : tiles) {
+            if (smartMemory.isClaimed(t.x, t.y)) continue;
+            int d = Math.abs(getX() - t.x) + Math.abs(getY() - t.y);
+            if (d > 0 && d <= maxDist && d < bestDist) {
+                bestDist = d;
+                best = t;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Check if detouring to a tile is fuel-affordable (tile → nearest hole → fuel station).
+     */
+    private boolean isAffordableDetour(Int2D tile) {
+        Int2D fuelPos = smartMemory.getKnownFuelStation();
+        if (fuelPos == null) return false;
+        int costToTile = Math.abs(getX() - tile.x) + Math.abs(getY() - tile.y);
+        Int2D nearestHole = smartMemory.getClosestHolePosition(tile.x, tile.y);
+        int costTileToHole = (nearestHole != null)
+                ? Math.abs(tile.x - nearestHole.x) + Math.abs(tile.y - nearestHole.y) : 20;
+        int hx = (nearestHole != null) ? nearestHole.x : tile.x;
+        int hy = (nearestHole != null) ? nearestHole.y : tile.y;
+        int costHoleToFuel = Math.abs(hx - fuelPos.x) + Math.abs(hy - fuelPos.y);
+        int totalCost = costToTile + costTileToHole + costHoleToFuel;
+        double affordMult = smartMemory.isDense() ? 1.3 : 1.5;
+        int affordBuffer = smartMemory.isDense() ? 20 : 30;
+        return fuelLevel > totalCost * affordMult + affordBuffer;
     }
 
     private void voidCurrentPath() {
