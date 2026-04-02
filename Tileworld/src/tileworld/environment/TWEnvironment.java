@@ -15,12 +15,12 @@ import sim.util.Int2D;
 import tileworld.Parameters;
 import tileworld.TWGUI;
 import tileworld.agent.Message;
-import tileworld.agent.AdityaAgent;
-import tileworld.agent.YutaekAgent;
-import tileworld.agent.AnanyaAgent;
-import tileworld.agent.MateAgent;
-import tileworld.agent.TwissaAgent;
-import tileworld.agent.NikAgent;
+import tileworld.agent.FuelScoutAgent;
+import tileworld.agent.TileHunterAgent;
+import tileworld.agent.HoleFillerAgent;
+import tileworld.agent.ExplorerAgent;
+import tileworld.agent.DeliveryOptimizerAgent;
+import tileworld.agent.SmarterReplanningAgent;
 import tileworld.agent.SimpleTWAgent;
 import tileworld.agent.SmartTWAgent;
 import tileworld.agent.TWAgent;
@@ -117,17 +117,17 @@ public class TWEnvironment extends SimState implements Steppable {
         //Now we create some agents
         Int2D pos;
         pos = this.generateRandomLocation();
-        createAgent(new AdityaAgent("Aditya", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        createAgent(new FuelScoutAgent("FuelScout", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 0));
         pos = this.generateRandomLocation();
-        createAgent(new YutaekAgent("Yutaek", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        createAgent(new TileHunterAgent("TileHunter", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 1));
         pos = this.generateRandomLocation();
-        createAgent(new AnanyaAgent("Ananya", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        createAgent(new HoleFillerAgent("HoleFiller", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 2));
         pos = this.generateRandomLocation();
-        createAgent(new MateAgent("Mate", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        createAgent(new ExplorerAgent("Explorer", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 3));
         pos = this.generateRandomLocation();
-        createAgent(new TwissaAgent("Twissa", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        createAgent(new DeliveryOptimizerAgent("DeliveryOptimizer", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 4));
         pos = this.generateRandomLocation();
-        createAgent(new NikAgent("Nik", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
+        createAgent(new SmarterReplanningAgent("SmarterReplanning", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 5));
         
 //        
         //create the fueling station

@@ -36,6 +36,7 @@ import tileworld.planners.TWPathStep;
 public class SmartTWAgent extends TWAgent {
 
     private final String name;
+    private final int agentIndex;
     private SmartTWAgentMemory smartMemory;
     private AstarPathGenerator pathGenerator;
     private SmartTWPlanner planner;
@@ -60,9 +61,27 @@ public class SmartTWAgent extends TWAgent {
     private int zoneStartX, zoneEndX, zoneStartY, zoneEndY;
     private boolean zoneExplored = false;
 
+    // Custom message data (populated in communicate(), used in think())
+    protected final ArrayList<String> lowFuelAgents = new ArrayList<>();
+    protected final ArrayList<Int2D> expiringTargets = new ArrayList<>();
+    protected final ArrayList<HotspotEntry> hotspots = new ArrayList<>();
+    protected final ArrayList<String> zoneSwapRequests = new ArrayList<>();
+
+    // Inner class for hotspot data (position + density together, no parallel lists)
+    protected static class HotspotEntry {
+        final Int2D position;
+        final double density;
+
+        HotspotEntry(Int2D position, double density) {
+            this.position = position;
+            this.density = density;
+        }
+    }
+
     public SmartTWAgent(String name, int xpos, int ypos, TWEnvironment env, double fuelLevel, int agentIndex) {
         super(xpos, ypos, env, fuelLevel);
         this.name = name;
+        this.agentIndex = agentIndex;
 
         // Replace default memory with our enhanced version
         this.smartMemory = new SmartTWAgentMemory(this, env.schedule,
@@ -102,6 +121,13 @@ public class SmartTWAgent extends TWAgent {
     public void communicate() {
         double now = getEnvironment().schedule.getTime();
 
+        // Clear previous step's custom message data BEFORE parsing
+        // This ensures we start with fresh data from this step's messages
+        lowFuelAgents.clear();
+        expiringTargets.clear();
+        hotspots.clear();
+        zoneSwapRequests.clear();
+
         // 1. Read and process messages from other agents
         smartMemory.clearAllClaims();
         ArrayList<Message> messages = getEnvironment().getMessages();
@@ -119,6 +145,7 @@ public class SmartTWAgent extends TWAgent {
             String payload = content.substring(colonIdx + 1);
 
             try {
+                // --- EXISTING BASE CLASS PARSING (keep this unchanged) ---
                 if ("FUEL".equals(type)) {
                     String[] parts = payload.split(",");
                     int fx = Integer.parseInt(parts[0]);
@@ -146,6 +173,42 @@ public class SmartTWAgent extends TWAgent {
                     int cx = Integer.parseInt(parts[0]);
                     int cy = Integer.parseInt(parts[1]);
                     smartMemory.addClaim(cx, cy, now);
+
+                // --- NEW CUSTOM MESSAGE TYPES (add these) ---
+                } else if ("LOW".equals(type)) {
+                    // Parse: "LOW:agentId,fuel"
+                    String[] parts = payload.split(",");
+                    if (parts.length >= 1) {
+                        lowFuelAgents.add(parts[0]); // Store agentId with low fuel
+                    }
+                }
+                else if ("EXPIRING".equals(type)) {
+                    // Parse: "EXPIRING:x,y,reason"
+                    String[] parts = payload.split(",");
+                    if (parts.length >= 2) {
+                        int ex = Integer.parseInt(parts[0]);
+                        int ey = Integer.parseInt(parts[1]);
+                        expiringTargets.add(new Int2D(ex, ey));
+                    }
+                }
+                else if ("HOTSPOT".equals(type)) {
+                    // Parse: "HOTSPOT:x,y,density"
+                    String[] parts = payload.split(",");
+                    if (parts.length >= 3) {
+                        Int2D pos = new Int2D(
+                            Integer.parseInt(parts[0]),
+                            Integer.parseInt(parts[1])
+                        );
+                        double density = Double.parseDouble(parts[2]);
+                        hotspots.add(new HotspotEntry(pos, density));
+                    }
+                }
+                else if ("SWAP".equals(type)) {
+                    // Parse: "SWAP:agentName,status" e.g., "SWAP:Explorer3,ZONE_DONE"
+                    String[] parts = payload.split(",");
+                    if (parts.length >= 2) {
+                        zoneSwapRequests.add(parts[0] + "," + parts[1]); // Store as "agentName,status"
+                    }
                 }
             } catch (Exception e) {
                 // Malformed message, skip
@@ -380,7 +443,7 @@ public class SmartTWAgent extends TWAgent {
      * Navigate toward a target using cached A* paths.
      * Returns next direction, or null if no path found.
      */
-    private TWDirection navigateTo(int tx, int ty, String goalType) {
+    protected TWDirection navigateTo(int tx, int ty, String goalType) {
         // If we have a valid cached path for this goal, follow it
         if (currentPath != null && currentPath.hasNext()
                 && goalType.equals(currentGoalType)
@@ -416,7 +479,7 @@ public class SmartTWAgent extends TWAgent {
     /**
      * Greedy exploration for when fuel station is unknown — same state machine.
      */
-    private TWDirection exploreGreedy() {
+    protected TWDirection exploreGreedy() {
         return sweepStep();
     }
 
@@ -612,12 +675,20 @@ public class SmartTWAgent extends TWAgent {
         return name;
     }
 
+    public int getAgentIndex() {
+        return agentIndex;
+    }
+
     public int getCarriedTileCount() {
         return carriedTiles.size();
     }
 
     public SmartTWAgentMemory getSmartMemory() {
         return smartMemory;
+    }
+
+    protected SmartTWPlanner getPlanner() {
+        return planner;
     }
 
     public static Portrayal getPortrayal() {
