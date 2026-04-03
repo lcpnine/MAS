@@ -88,22 +88,15 @@ java -cp Tileworld/bin:lib/MASON_14.jar tileworld.TileworldMain
 ```
 
 **What it adds:**
-<<<<<<< HEAD
-- Runtime environment detection (dense/sparse, large/small grid, short/long lifetime)
-=======
 - Observation-based environment detection (density from avg objects per sensor step, lifetime from disappearance tracking, grid size from actual environment dimensions) — no hardcoded `Parameters` reads for classification
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 - Adaptive fuel safety margins
 - Opportunistic refueling near fuel stations
 - Tile batching in dense environments
 - Dynamic replanning for closer targets
 - Adaptive lawnmower step size
-<<<<<<< HEAD
-=======
 - Path validity checking before execution (avoids wasted steps on newly blocked cells)
 - Stale claim cleanup when claimed objects disappear from memory
 - Hole lifetime validation to skip holes/tiles that will expire before the agent arrives
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
 ## Running Without Checkout (Isolated)
 
@@ -176,8 +169,6 @@ Avg Reward
        32.1   160.3   541.5   556.1
 ```
 
-<<<<<<< HEAD
-=======
 ## Config 3 Simulation Results
 
 Since Config 3 is unknown in the competition, we tested 5 hypothetical "Config 3" scenarios to validate that our runtime environment detection adapts correctly across diverse parameter combinations.
@@ -217,7 +208,6 @@ To test your own Config 3:
 3. Run: `java -cp Tileworld/bin:lib/MASON_14.jar tileworld.TileworldMain`
 4. Remember to revert Parameters.java after testing
 
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 ## Other Run Modes
 
 ```bash

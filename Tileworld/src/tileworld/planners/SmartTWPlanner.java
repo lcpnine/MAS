@@ -1,10 +1,7 @@
 package tileworld.planners;
 
 import java.util.List;
-<<<<<<< HEAD
-=======
 
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 import sim.util.Int2D;
 import tileworld.Parameters;
 import tileworld.agent.SmartTWAgent;
@@ -53,32 +50,17 @@ public class SmartTWPlanner implements TWPlanner {
         voidPlan();
         Int2D fuelPos = memory.getKnownFuelStation();
         List<Int2D> holes = memory.getAllHolePositions();
-<<<<<<< HEAD
-        if (holes.isEmpty()) return null;
-=======
         if (holes.isEmpty())
             return null;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
         // Adaptive affordability based on environment
         double affordMult = memory.isShortLifetime() ? 1.3 : 1.5;
         int affordBuffer = memory.isShortLifetime() ? 20 : 30;
-<<<<<<< HEAD
-        int maxDist = memory.isShortLifetime() ? (int)(Parameters.lifeTime * 0.6) : Integer.MAX_VALUE;
-=======
         int maxDist = memory.isShortLifetime() ? (int) (memory.getEstimatedLifetime() * 0.6) : Integer.MAX_VALUE;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
         Int2D bestHole = null;
         double bestDist = Double.MAX_VALUE;
 
-<<<<<<< HEAD
-        for (Int2D hole : holes) {
-            if (memory.isClaimed(hole.x, hole.y)) continue;
-
-            int costToHole = manhattan(agent.getX(), agent.getY(), hole.x, hole.y);
-            if (costToHole > maxDist) continue;
-=======
         double currentTime = agent.getEnvironment().schedule.getTime();
 
         for (Int2D hole : holes) {
@@ -97,7 +79,6 @@ public class SmartTWPlanner implements TWPlanner {
                 if (costToHole > remaining * 0.8)
                     continue;
             }
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
             int costHoleToFuel = (fuelPos != null)
                     ? manhattan(hole.x, hole.y, fuelPos.x, fuelPos.y)
@@ -105,12 +86,8 @@ public class SmartTWPlanner implements TWPlanner {
 
             int totalCost = costToHole + costHoleToFuel;
             boolean affordable = agent.getFuelLevel() > totalCost * affordMult + affordBuffer;
-<<<<<<< HEAD
-            if (!affordable) continue;
-=======
             if (!affordable)
                 continue;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
             if (costToHole < bestDist) {
                 bestDist = costToHole;
@@ -118,12 +95,8 @@ public class SmartTWPlanner implements TWPlanner {
             }
         }
 
-<<<<<<< HEAD
-        if (bestHole == null) return null;
-=======
         if (bestHole == null)
             return null;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
         TWPath path = pathGenerator.findPath(agent.getX(), agent.getY(), bestHole.x, bestHole.y);
         if (path != null && path.hasNext()) {
@@ -142,39 +115,21 @@ public class SmartTWPlanner implements TWPlanner {
     public TWPath planToTile() {
         voidPlan();
         List<Int2D> tiles = memory.getAllTilePositions();
-<<<<<<< HEAD
-        if (tiles.isEmpty()) return null;
-
-        Int2D fuelPos = memory.getKnownFuelStation();
-        if (fuelPos == null) return null;
-=======
         if (tiles.isEmpty())
             return null;
 
         Int2D fuelPos = memory.getKnownFuelStation();
         if (fuelPos == null)
             return null;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
         // Adaptive affordability based on environment
         double affordMult = memory.isShortLifetime() ? 1.3 : 1.5;
         int affordBuffer = memory.isShortLifetime() ? 20 : 30;
-<<<<<<< HEAD
-        int maxDist = memory.isShortLifetime() ? (int)(Parameters.lifeTime * 0.6) : Integer.MAX_VALUE;
-=======
         int maxDist = memory.isShortLifetime() ? (int) (memory.getEstimatedLifetime() * 0.6) : Integer.MAX_VALUE;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
         Int2D bestTile = null;
         double bestScore = Double.MAX_VALUE;
 
-<<<<<<< HEAD
-        for (Int2D tile : tiles) {
-            if (memory.isClaimed(tile.x, tile.y)) continue;
-
-            int costToTile = manhattan(agent.getX(), agent.getY(), tile.x, tile.y);
-            if (costToTile > maxDist) continue;
-=======
         double currentTime = agent.getEnvironment().schedule.getTime();
 
         for (Int2D tile : tiles) {
@@ -184,7 +139,6 @@ public class SmartTWPlanner implements TWPlanner {
             int costToTile = manhattan(agent.getX(), agent.getY(), tile.x, tile.y);
             if (costToTile > maxDist)
                 continue;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
             Int2D nearestHole = memory.getClosestHolePosition(tile.x, tile.y);
             int costTileToHole;
@@ -193,8 +147,6 @@ public class SmartTWPlanner implements TWPlanner {
                 costTileToHole = manhattan(tile.x, tile.y, nearestHole.x, nearestHole.y);
                 holeX = nearestHole.x;
                 holeY = nearestHole.y;
-<<<<<<< HEAD
-=======
 
                 // Skip if the hole will likely expire before the full trip completes
                 double holeObsTime = memory.getObservationTime(holeX, holeY);
@@ -204,7 +156,6 @@ public class SmartTWPlanner implements TWPlanner {
                     if ((costToTile + costTileToHole) > holeRemaining * 0.8)
                         continue;
                 }
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
             } else {
                 costTileToHole = 20;
                 holeX = tile.x;
@@ -215,12 +166,8 @@ public class SmartTWPlanner implements TWPlanner {
             int totalCost = costToTile + costTileToHole + costHoleToFuel;
 
             boolean affordable = agent.getFuelLevel() > totalCost * affordMult + affordBuffer;
-<<<<<<< HEAD
-            if (!affordable) continue;
-=======
             if (!affordable)
                 continue;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
             // Hole proximity scoring: only in dense environments where holes are plentiful
             double score = memory.isDense() ? costToTile + 0.5 * costTileToHole : costToTile;
@@ -230,12 +177,8 @@ public class SmartTWPlanner implements TWPlanner {
             }
         }
 
-<<<<<<< HEAD
-        if (bestTile == null) return null;
-=======
         if (bestTile == null)
             return null;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
         TWPath path = pathGenerator.findPath(agent.getX(), agent.getY(), bestTile.x, bestTile.y);
         if (path != null && path.hasNext()) {
@@ -249,12 +192,8 @@ public class SmartTWPlanner implements TWPlanner {
 
     @Override
     public TWDirection execute() {
-<<<<<<< HEAD
-        if (!hasPlan()) return null;
-=======
         if (!hasPlan())
             return null;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
         // Invalidate if target no longer in memory
         if (currentGoal != null) {
@@ -293,10 +232,6 @@ public class SmartTWPlanner implements TWPlanner {
             }
         }
 
-<<<<<<< HEAD
-        TWPathStep step = currentPath.popNext();
-        return step.getDirection();
-=======
         // Check if next step is blocked before committing
         TWPathStep step = currentPath.peekNext();
         TWDirection dir = step.getDirection();
@@ -309,7 +244,6 @@ public class SmartTWPlanner implements TWPlanner {
 
         currentPath.popNext();
         return dir;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
     }
 
     @Override

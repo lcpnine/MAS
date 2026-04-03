@@ -2,10 +2,7 @@ package tileworld.agent;
 
 import java.awt.Color;
 import java.util.ArrayList;
-<<<<<<< HEAD
-=======
 
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 import sim.display.GUIState;
 import sim.portrayal.Inspector;
 import sim.portrayal.LocationWrapper;
@@ -39,10 +36,7 @@ import tileworld.planners.TWPathStep;
 public class SmartTWAgent extends TWAgent {
 
     private final String name;
-<<<<<<< HEAD
-=======
     private final int agentIndex;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
     private SmartTWAgentMemory smartMemory;
     private AstarPathGenerator pathGenerator;
     private SmartTWPlanner planner;
@@ -53,34 +47,20 @@ public class SmartTWAgent extends TWAgent {
     private String currentGoalType; // "fuel", "explore"
 
     // Lawnmower exploration state machine
-<<<<<<< HEAD
-    private enum SweepState { HORIZONTAL, SHIFTING }
-=======
     private enum SweepState {
         HORIZONTAL, SHIFTING
     }
 
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
     private SweepState sweepState = SweepState.HORIZONTAL;
     private boolean sweepGoingRight;
     private int shiftRemaining = 0;
     private boolean shiftGoingDown;
-<<<<<<< HEAD
-    private final int LAWNMOWER_STEP;
-=======
     private int LAWNMOWER_STEP = 7; // default conservative; updated after warmup
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
     // Zone-based exploration
     private int zoneStartX, zoneEndX, zoneStartY, zoneEndY;
     private boolean zoneExplored = false;
 
-<<<<<<< HEAD
-
-    public SmartTWAgent(String name, int xpos, int ypos, TWEnvironment env, double fuelLevel) {
-        super(xpos, ypos, env, fuelLevel);
-        this.name = name;
-=======
     // Custom message data (populated in communicate(), used in think())
     protected final ArrayList<String> lowFuelAgents = new ArrayList<>();
     protected final ArrayList<Int2D> expiringTargets = new ArrayList<>();
@@ -102,7 +82,6 @@ public class SmartTWAgent extends TWAgent {
         super(xpos, ypos, env, fuelLevel);
         this.name = name;
         this.agentIndex = agentIndex;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
         // Replace default memory with our enhanced version
         this.smartMemory = new SmartTWAgentMemory(this, env.schedule,
@@ -113,17 +92,7 @@ public class SmartTWAgent extends TWAgent {
         int maxSearch = env.getxDimension() + env.getyDimension();
         this.pathGenerator = new AstarPathGenerator(env, this, maxSearch);
 
-<<<<<<< HEAD
-        // Zone assignment: 3 columns x 2 rows for agents 1-6
-        int agentIndex = 0;
-        try {
-            agentIndex = Integer.parseInt(name.replace("agent", "")) - 1;
-        } catch (NumberFormatException e) {
-            agentIndex = 0;
-        }
-=======
         // Zone assignment: 3 columns x 2 rows for agents 0-5
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         int col = agentIndex % 3;
         int row = agentIndex / 3;
         int colWidth = env.getxDimension() / 3;
@@ -144,12 +113,6 @@ public class SmartTWAgent extends TWAgent {
         this.sweepGoingRight = (xpos >= zoneMidX);
         this.shiftGoingDown = (ypos < zoneMidY);
 
-<<<<<<< HEAD
-        // Adaptive lawnmower step: tighter sweep in dense environments
-        this.LAWNMOWER_STEP = (Parameters.tileMean >= 1.0) ? 5 : 7;
-
-=======
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         // Phase 2: goal-directed planner
         this.planner = new SmartTWPlanner(this, this.smartMemory, this.pathGenerator);
     }
@@ -158,8 +121,6 @@ public class SmartTWAgent extends TWAgent {
     public void communicate() {
         double now = getEnvironment().schedule.getTime();
 
-<<<<<<< HEAD
-=======
         // Clear previous step's custom message data BEFORE parsing
         // This ensures we start with fresh data from this step's messages
         lowFuelAgents.clear();
@@ -167,19 +128,10 @@ public class SmartTWAgent extends TWAgent {
         hotspots.clear();
         zoneSwapRequests.clear();
 
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         // 1. Read and process messages from other agents
         smartMemory.clearAllClaims();
         ArrayList<Message> messages = getEnvironment().getMessages();
         for (Message msg : messages) {
-<<<<<<< HEAD
-            if (msg.getFrom().equals(name)) continue; // skip own messages
-            String content = msg.getMessage();
-            if (content == null) continue;
-
-            int colonIdx = content.indexOf(':');
-            if (colonIdx < 0) continue;
-=======
             if (msg.getFrom().equals(name))
                 continue; // skip own messages
             String content = msg.getMessage();
@@ -189,15 +141,11 @@ public class SmartTWAgent extends TWAgent {
             int colonIdx = content.indexOf(':');
             if (colonIdx < 0)
                 continue;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
             String type = content.substring(0, colonIdx);
             String payload = content.substring(colonIdx + 1);
 
             try {
-<<<<<<< HEAD
-=======
                 // --- EXISTING BASE CLASS PARSING (keep this unchanged) ---
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
                 if ("FUEL".equals(type)) {
                     String[] parts = payload.split(",");
                     int fx = Integer.parseInt(parts[0]);
@@ -225,8 +173,6 @@ public class SmartTWAgent extends TWAgent {
                     int cx = Integer.parseInt(parts[0]);
                     int cy = Integer.parseInt(parts[1]);
                     smartMemory.addClaim(cx, cy, now);
-<<<<<<< HEAD
-=======
 
                 // --- NEW CUSTOM MESSAGE TYPES (add these) ---
                 } else if ("LOW".equals(type)) {
@@ -263,7 +209,6 @@ public class SmartTWAgent extends TWAgent {
                     if (parts.length >= 2) {
                         zoneSwapRequests.add(parts[0] + "," + parts[1]); // Store as "agentName,status"
                     }
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
                 }
             } catch (Exception e) {
                 // Malformed message, skip
@@ -324,12 +269,8 @@ public class SmartTWAgent extends TWAgent {
             return new TWThought(TWAction.REFUEL, TWDirection.Z);
         }
 
-<<<<<<< HEAD
-        // 2. FUEL EMERGENCY — navigate to fuel station (MUST return, never fall through)
-=======
         // 2. FUEL EMERGENCY — navigate to fuel station (MUST return, never fall
         // through)
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         if (isFuelEmergency()) {
             planner.voidPlan(); // cancel any tile/hole seeking
             if (!"fuel".equals(currentGoalType)) {
@@ -377,14 +318,9 @@ public class SmartTWAgent extends TWAgent {
             }
         }
 
-<<<<<<< HEAD
-        // 5. TILE BATCHING — if carrying < 3 tiles, pick up nearby tile before delivering (dense only)
-        if (smartMemory.isDense() && hasTile() && carriedTiles.size() < 3) {
-=======
         // 5. TILE BATCHING — if carrying < 3 tiles, pick up nearby tile before
         // delivering (dense only)
         if (smartMemory.isDense() && !smartMemory.isShortLifetime() && hasTile() && carriedTiles.size() < 3) {
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
             Int2D nearbyTile = findNearbyTile(5);
             if (nearbyTile != null && isAffordableDetour(nearbyTile)) {
                 if (!"tile".equals(planner.getGoalType())
@@ -401,12 +337,8 @@ public class SmartTWAgent extends TWAgent {
 
         // 6. DELIVER — carrying tile, seek hole via planner
         if (hasTile()) {
-<<<<<<< HEAD
-            // Void planner if it's pursuing a tile (we already have one, prioritize delivery)
-=======
             // Void planner if it's pursuing a tile (we already have one, prioritize
             // delivery)
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
             if ("tile".equals(planner.getGoalType())) {
                 planner.voidPlan();
             }
@@ -437,14 +369,11 @@ public class SmartTWAgent extends TWAgent {
             // No affordable tile — fall through to explore
         }
 
-<<<<<<< HEAD
-=======
         // Update lawnmower step once environment is classified
         if (smartMemory.isDense() && LAWNMOWER_STEP != 5) {
             LAWNMOWER_STEP = 5;
         }
 
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         // 7. EXPLORE — systematic coverage with persistent target
         TWDirection dir = exploreDirection();
         if (dir != null) {
@@ -498,15 +427,6 @@ public class SmartTWAgent extends TWAgent {
             int manhattanDist = Math.abs(getX() - fuelPos.x) + Math.abs(getY() - fuelPos.y);
             // Large grid + dense obstacles: need extra margin for detours
             if (smartMemory.isLargeGrid()) {
-<<<<<<< HEAD
-                return (int)(manhattanDist * 2.5) + 50;
-            } else {
-                return (int)(manhattanDist * 2.0) + 40;
-            }
-        } else {
-            // Unknown fuel station — very conservative
-            return (int)(Parameters.defaultFuelLevel * 0.5);
-=======
                 return (int) (manhattanDist * 2.5) + 50;
             } else {
                 return (int) (manhattanDist * 2.0) + 40;
@@ -514,7 +434,6 @@ public class SmartTWAgent extends TWAgent {
         } else {
             // Unknown fuel station — very conservative
             return (int) (Parameters.defaultFuelLevel * 0.5);
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         }
     }
 
@@ -524,11 +443,7 @@ public class SmartTWAgent extends TWAgent {
      * Navigate toward a target using cached A* paths.
      * Returns next direction, or null if no path found.
      */
-<<<<<<< HEAD
-    private TWDirection navigateTo(int tx, int ty, String goalType) {
-=======
     protected TWDirection navigateTo(int tx, int ty, String goalType) {
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         // If we have a valid cached path for this goal, follow it
         if (currentPath != null && currentPath.hasNext()
                 && goalType.equals(currentGoalType)
@@ -553,12 +468,8 @@ public class SmartTWAgent extends TWAgent {
     /**
      * Systematic exploration using a state-machine lawnmower.
      * HORIZONTAL: sweep East/West until hitting the edge.
-<<<<<<< HEAD
-     * SHIFTING: move North/South by LAWNMOWER_STEP cells, then reverse horizontal direction.
-=======
      * SHIFTING: move North/South by LAWNMOWER_STEP cells, then reverse horizontal
      * direction.
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
      * Pure greedy — no A* overhead.
      */
     private TWDirection exploreDirection() {
@@ -568,11 +479,7 @@ public class SmartTWAgent extends TWAgent {
     /**
      * Greedy exploration for when fuel station is unknown — same state machine.
      */
-<<<<<<< HEAD
-    private TWDirection exploreGreedy() {
-=======
     protected TWDirection exploreGreedy() {
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         return sweepStep();
     }
 
@@ -593,11 +500,7 @@ public class SmartTWAgent extends TWAgent {
             TWDirection moveDir = sweepGoingRight ? TWDirection.E : TWDirection.W;
 
             boolean atTargetEdge = (sweepGoingRight && getX() >= sweepMaxX)
-<<<<<<< HEAD
-                                || (!sweepGoingRight && getX() <= sweepMinX);
-=======
                     || (!sweepGoingRight && getX() <= sweepMinX);
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
             if (atTargetEdge) {
                 sweepState = SweepState.SHIFTING;
                 sweepGoingRight = !sweepGoingRight;
@@ -605,13 +508,6 @@ public class SmartTWAgent extends TWAgent {
                 return sweepStep();
             }
 
-<<<<<<< HEAD
-            if (canMove(moveDir)) return moveDir;
-            TWDirection detour = shiftGoingDown ? TWDirection.S : TWDirection.N;
-            if (canMove(detour)) return detour;
-            detour = shiftGoingDown ? TWDirection.N : TWDirection.S;
-            if (canMove(detour)) return detour;
-=======
             if (canMove(moveDir))
                 return moveDir;
             TWDirection detour = shiftGoingDown ? TWDirection.S : TWDirection.N;
@@ -620,7 +516,6 @@ public class SmartTWAgent extends TWAgent {
             detour = shiftGoingDown ? TWDirection.N : TWDirection.S;
             if (canMove(detour))
                 return detour;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
             return getRandomSafeDirection();
         }
 
@@ -660,12 +555,8 @@ public class SmartTWAgent extends TWAgent {
                 return shiftDir;
             }
             TWDirection detour = sweepGoingRight ? TWDirection.E : TWDirection.W;
-<<<<<<< HEAD
-            if (canMove(detour)) return detour;
-=======
             if (canMove(detour))
                 return detour;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
             return getRandomSafeDirection();
         }
 
@@ -690,27 +581,15 @@ public class SmartTWAgent extends TWAgent {
             secondary = dx > 0 ? TWDirection.E : (dx < 0 ? TWDirection.W : null);
         }
 
-<<<<<<< HEAD
-        if (primary != null && canMove(primary)) return primary;
-        if (secondary != null && canMove(secondary)) return secondary;
-=======
         if (primary != null && canMove(primary))
             return primary;
         if (secondary != null && canMove(secondary))
             return secondary;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
         // Try perpendicular directions to get around obstacles
         if (primary != null) {
             // Try both perpendicular directions
             if (primary == TWDirection.E || primary == TWDirection.W) {
-<<<<<<< HEAD
-                if (canMove(TWDirection.N)) return TWDirection.N;
-                if (canMove(TWDirection.S)) return TWDirection.S;
-            } else {
-                if (canMove(TWDirection.E)) return TWDirection.E;
-                if (canMove(TWDirection.W)) return TWDirection.W;
-=======
                 if (canMove(TWDirection.N))
                     return TWDirection.N;
                 if (canMove(TWDirection.S))
@@ -720,7 +599,6 @@ public class SmartTWAgent extends TWAgent {
                     return TWDirection.E;
                 if (canMove(TWDirection.W))
                     return TWDirection.W;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
             }
         }
 
@@ -735,20 +613,12 @@ public class SmartTWAgent extends TWAgent {
     }
 
     private TWDirection getRandomSafeDirection() {
-<<<<<<< HEAD
-        TWDirection[] dirs = {TWDirection.N, TWDirection.S, TWDirection.E, TWDirection.W};
-        int start = getEnvironment().random.nextInt(4);
-        for (int i = 0; i < 4; i++) {
-            TWDirection d = dirs[(start + i) % 4];
-            if (canMove(d)) return d;
-=======
         TWDirection[] dirs = { TWDirection.N, TWDirection.S, TWDirection.E, TWDirection.W };
         int start = getEnvironment().random.nextInt(4);
         for (int i = 0; i < 4; i++) {
             TWDirection d = dirs[(start + i) % 4];
             if (canMove(d))
                 return d;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         }
         return TWDirection.Z;
     }
@@ -761,12 +631,8 @@ public class SmartTWAgent extends TWAgent {
         Int2D best = null;
         int bestDist = maxDist + 1;
         for (Int2D t : tiles) {
-<<<<<<< HEAD
-            if (smartMemory.isClaimed(t.x, t.y)) continue;
-=======
             if (smartMemory.isClaimed(t.x, t.y))
                 continue;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
             int d = Math.abs(getX() - t.x) + Math.abs(getY() - t.y);
             if (d > 0 && d <= maxDist && d < bestDist) {
                 bestDist = d;
@@ -777,17 +643,6 @@ public class SmartTWAgent extends TWAgent {
     }
 
     /**
-<<<<<<< HEAD
-     * Check if detouring to a tile is fuel-affordable (tile → nearest hole → fuel station).
-     */
-    private boolean isAffordableDetour(Int2D tile) {
-        Int2D fuelPos = smartMemory.getKnownFuelStation();
-        if (fuelPos == null) return false;
-        int costToTile = Math.abs(getX() - tile.x) + Math.abs(getY() - tile.y);
-        Int2D nearestHole = smartMemory.getClosestHolePosition(tile.x, tile.y);
-        int costTileToHole = (nearestHole != null)
-                ? Math.abs(tile.x - nearestHole.x) + Math.abs(tile.y - nearestHole.y) : 20;
-=======
      * Check if detouring to a tile is fuel-affordable (tile → nearest hole → fuel
      * station).
      */
@@ -800,7 +655,6 @@ public class SmartTWAgent extends TWAgent {
         int costTileToHole = (nearestHole != null)
                 ? Math.abs(tile.x - nearestHole.x) + Math.abs(tile.y - nearestHole.y)
                 : 20;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         int hx = (nearestHole != null) ? nearestHole.x : tile.x;
         int hy = (nearestHole != null) ? nearestHole.y : tile.y;
         int costHoleToFuel = Math.abs(hx - fuelPos.x) + Math.abs(hy - fuelPos.y);
@@ -821,13 +675,10 @@ public class SmartTWAgent extends TWAgent {
         return name;
     }
 
-<<<<<<< HEAD
-=======
     public int getAgentIndex() {
         return agentIndex;
     }
 
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
     public int getCarriedTileCount() {
         return carriedTiles.size();
     }
@@ -836,13 +687,10 @@ public class SmartTWAgent extends TWAgent {
         return smartMemory;
     }
 
-<<<<<<< HEAD
-=======
     protected SmartTWPlanner getPlanner() {
         return planner;
     }
 
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
     public static Portrayal getPortrayal() {
         return new TWAgentPortrayal(Color.red, Parameters.defaultSensorRange) {
             @Override
