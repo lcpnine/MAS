@@ -5,10 +5,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-<<<<<<< HEAD
-=======
 
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 import sim.engine.Schedule;
 import sim.util.Bag;
 import sim.util.Int2D;
@@ -17,25 +14,15 @@ import tileworld.Parameters;
 import tileworld.environment.TWEntity;
 import tileworld.environment.TWFuelStation;
 import tileworld.environment.TWHole;
-<<<<<<< HEAD
-import tileworld.environment.TWTile;
-import tileworld.environment.TWObstacle;
-import tileworld.environment.TWObject;
-=======
 import tileworld.environment.TWObject;
 import tileworld.environment.TWTile;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
 /**
  * Enhanced memory system for SmartTWAgent.
  *
  * Extends the base working memory with:
-<<<<<<< HEAD
- * - Fuel station tracking (TWFuelStation is not a TWObject, so the parent skips it)
-=======
  * - Fuel station tracking (TWFuelStation is not a TWObject, so the parent skips
  * it)
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
  * - Parallel state arrays (parent's objects[][] is private)
  * - Time-based memory decay aligned with object lifetime
  * - Exploration tracking via lastVisitedTime grid
@@ -69,15 +56,12 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
     // Exploration tracking — when did we last visit/see each cell
     private final double[][] lastVisitedTime;
 
-<<<<<<< HEAD
-=======
     // Runtime observation counters for environment classification
     private int totalObjectsSensed = 0;
     private int senseStepCount = 0;
     private int objectDisappearances = 0;
     private long totalObservedLifetime = 0;
 
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
     public SmartTWAgentMemory(TWAgent agent, Schedule schedule, int x, int y) {
         super(agent, schedule, x, y);
         this.me = agent;
@@ -101,16 +85,6 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
 
     /**
      * Override to intercept fuel station sightings and maintain parallel arrays.
-<<<<<<< HEAD
-     * TWFuelStation extends TWEntity but NOT TWObject, so parent's updateMemory skips it.
-     */
-    @Override
-    public void updateMemory(Bag sensedObjects, IntBag objectXCoords, IntBag objectYCoords,
-                             Bag sensedAgents, IntBag agentXCoords, IntBag agentYCoords) {
-
-        double now = schedule.getTime();
-
-=======
      * TWFuelStation extends TWEntity but NOT TWObject, so parent's updateMemory
      * skips it.
      */
@@ -129,7 +103,6 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
         }
         totalObjectsSensed += objectCount;
 
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         // Mark sensor range cells as visited
         int sensorRange = Parameters.defaultSensorRange;
         for (int dx = -sensorRange; dx <= sensorRange; dx++) {
@@ -190,15 +163,12 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
                         }
                     }
                     if (!stillThere) {
-<<<<<<< HEAD
-=======
                         // Track observed lifetime for environment classification
                         if (observationTimes[cx][cy] > 0) {
                             double observedLife = now - observationTimes[cx][cy];
                             totalObservedLifetime += (long) observedLife;
                             objectDisappearances++;
                         }
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
                         goneEntities.add(new Int2D(cx, cy));
                         rememberedEntities[cx][cy] = null;
                         sharedEntityType[cx][cy] = 0;
@@ -210,11 +180,7 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
 
         // Call parent to handle standard memory updates
         super.updateMemory(sensedObjects, objectXCoords, objectYCoords,
-<<<<<<< HEAD
-                          sensedAgents, agentXCoords, agentYCoords);
-=======
                 sensedAgents, agentXCoords, agentYCoords);
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
         // Decay old memories
         decayMemory();
@@ -250,8 +216,6 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
             Map.Entry<String, Double> entry = it.next();
             if (now - entry.getValue() >= lifetime) {
                 it.remove();
-<<<<<<< HEAD
-=======
             } else {
                 // Remove stale claims where the object no longer exists in memory
                 String[] parts = entry.getKey().split(",");
@@ -262,7 +226,6 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
                         && sharedEntityType[cx][cy] == 0) {
                     it.remove();
                 }
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
             }
         }
     }
@@ -355,12 +318,8 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
     // ---- Exploration ----
 
     /**
-<<<<<<< HEAD
-     * Find the direction toward the least-recently-visited area within a search radius.
-=======
      * Find the direction toward the least-recently-visited area within a search
      * radius.
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
      * Evaluates each cardinal direction by averaging lastVisitedTime in a cone.
      */
     public Int2D getLeastVisitedTarget(int searchRadius) {
@@ -373,12 +332,8 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
             for (int dy = -searchRadius; dy <= searchRadius; dy += 3) {
                 int tx = me.getX() + dx;
                 int ty = me.getY() + dy;
-<<<<<<< HEAD
-                if (!isInBounds(tx, ty) || (dx == 0 && dy == 0)) continue;
-=======
                 if (!isInBounds(tx, ty) || (dx == 0 && dy == 0))
                     continue;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
                 double visitTime = lastVisitedTime[tx][ty];
                 double score = (visitTime < 0) ? -1 : visitTime; // never visited = lowest score
@@ -404,12 +359,8 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
     }
 
     /**
-<<<<<<< HEAD
-     * Get the object at the agent's current position from environment's object grid.
-=======
      * Get the object at the agent's current position from environment's object
      * grid.
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
      */
     public TWEntity getObjectAtCurrentPos() {
         Object obj = me.getEnvironment().getObjectGrid().get(me.getX(), me.getY());
@@ -423,10 +374,6 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
         return x >= 0 && y >= 0 && x < xDim && y < yDim;
     }
 
-<<<<<<< HEAD
-    public int getXDim() { return xDim; }
-    public int getYDim() { return yDim; }
-=======
     public int getXDim() {
         return xDim;
     }
@@ -434,7 +381,6 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
     public int getYDim() {
         return yDim;
     }
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
     // ---- Communication support ----
 
@@ -445,12 +391,8 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
     }
 
     public void addSharedTile(int x, int y, double time) {
-<<<<<<< HEAD
-        if (!isInBounds(x, y)) return;
-=======
         if (!isInBounds(x, y))
             return;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         // Only update if we don't already have a direct observation here
         if (rememberedEntities[x][y] == null) {
             sharedEntityType[x][y] = 1;
@@ -462,12 +404,8 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
     }
 
     public void addSharedHole(int x, int y, double time) {
-<<<<<<< HEAD
-        if (!isInBounds(x, y)) return;
-=======
         if (!isInBounds(x, y))
             return;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         if (rememberedEntities[x][y] == null) {
             sharedEntityType[x][y] = 2;
             if (time > observationTimes[x][y]) {
@@ -477,12 +415,8 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
     }
 
     public void removeSharedEntity(int x, int y) {
-<<<<<<< HEAD
-        if (!isInBounds(x, y)) return;
-=======
         if (!isInBounds(x, y))
             return;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         rememberedEntities[x][y] = null;
         sharedEntityType[x][y] = 0;
         observationTimes[x][y] = -1;
@@ -510,17 +444,11 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
         double now = schedule.getTime();
         for (int x = 0; x < xDim; x++) {
             for (int y = 0; y < yDim; y++) {
-<<<<<<< HEAD
-                if (observationTimes[x][y] < 0) continue;
-                double age = now - observationTimes[x][y];
-                if (age >= Parameters.lifeTime) continue;
-=======
                 if (observationTimes[x][y] < 0)
                     continue;
                 double age = now - observationTimes[x][y];
                 if (age >= Parameters.lifeTime)
                     continue;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
                 if (rememberedEntities[x][y] instanceof TWTile || sharedEntityType[x][y] == 1) {
                     tiles.add(new Int2D(x, y));
                 }
@@ -534,17 +462,11 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
         double now = schedule.getTime();
         for (int x = 0; x < xDim; x++) {
             for (int y = 0; y < yDim; y++) {
-<<<<<<< HEAD
-                if (observationTimes[x][y] < 0) continue;
-                double age = now - observationTimes[x][y];
-                if (age >= Parameters.lifeTime) continue;
-=======
                 if (observationTimes[x][y] < 0)
                     continue;
                 double age = now - observationTimes[x][y];
                 if (age >= Parameters.lifeTime)
                     continue;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
                 if (rememberedEntities[x][y] instanceof TWHole || sharedEntityType[x][y] == 2) {
                     holes.add(new Int2D(x, y));
                 }
@@ -587,11 +509,6 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
 
     // ---- Discovery lists for communication ----
 
-<<<<<<< HEAD
-    public ArrayList<Int2D> getNewTiles() { return newTiles; }
-    public ArrayList<Int2D> getNewHoles() { return newHoles; }
-    public ArrayList<Int2D> getGoneEntities() { return goneEntities; }
-=======
     public ArrayList<Int2D> getNewTiles() {
         return newTiles;
     }
@@ -603,7 +520,6 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
     public ArrayList<Int2D> getGoneEntities() {
         return goneEntities;
     }
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
 
     public void removeObject(TWEntity entity) {
         if (entity != null && isInBounds(entity.getX(), entity.getY())) {
@@ -613,20 +529,6 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
         }
     }
 
-<<<<<<< HEAD
-    // ---- Environment profile (runtime detection for Config 3 adaptability) ----
-
-    public boolean isDense() {
-        return Parameters.tileMean >= 1.0;
-    }
-
-    public boolean isShortLifetime() {
-        return Parameters.lifeTime <= 50;
-    }
-
-    public boolean isLargeGrid() {
-        return Parameters.xDimension >= 70;
-=======
     // ---- Observation time access ----
 
     public double getObservationTime(int x, int y) {
@@ -670,6 +572,5 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
             return (int) ((double) totalObservedLifetime / objectDisappearances);
         }
         return Parameters.lifeTime;
->>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
     }
 }
