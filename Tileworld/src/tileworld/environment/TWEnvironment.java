@@ -15,6 +15,12 @@ import sim.util.Int2D;
 import tileworld.Parameters;
 import tileworld.TWGUI;
 import tileworld.agent.Message;
+import tileworld.agent.FuelScoutAgent;
+import tileworld.agent.TileHunterAgent;
+import tileworld.agent.HoleFillerAgent;
+import tileworld.agent.ExplorerAgent;
+import tileworld.agent.DeliveryOptimizerAgent;
+import tileworld.agent.SmarterReplanningAgent;
 import tileworld.agent.SimpleTWAgent;
 import tileworld.agent.SmartTWAgent;
 import tileworld.agent.TWAgent;
@@ -109,10 +115,26 @@ public class TWEnvironment extends SimState implements Steppable {
         schedule.scheduleRepeating(this, 1, 1.0);
         
         //Now we create some agents
+<<<<<<< HEAD
         for (int i = 1; i <= 6; i++) {
             Int2D pos = this.generateRandomLocation();
             createAgent(new SmartTWAgent("agent" + i, pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel));
         }
+=======
+        Int2D pos;
+        pos = this.generateRandomLocation();
+        createAgent(new FuelScoutAgent("FuelScout", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 0));
+        pos = this.generateRandomLocation();
+        createAgent(new TileHunterAgent("TileHunter", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 1));
+        pos = this.generateRandomLocation();
+        createAgent(new HoleFillerAgent("HoleFiller", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 2));
+        pos = this.generateRandomLocation();
+        createAgent(new ExplorerAgent("Explorer", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 3));
+        pos = this.generateRandomLocation();
+        createAgent(new DeliveryOptimizerAgent("DeliveryOptimizer", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 4));
+        pos = this.generateRandomLocation();
+        createAgent(new SmarterReplanningAgent("SmarterReplanning", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 5));
+>>>>>>> f571aae19ae0809e71e7bad4a3916fc45e46e611
         
 //        
         //create the fueling station
