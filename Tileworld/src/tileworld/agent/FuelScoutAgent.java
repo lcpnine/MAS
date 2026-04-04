@@ -5,9 +5,7 @@ import tileworld.Parameters;
 import tileworld.environment.TWDirection;
 import tileworld.environment.TWEnvironment;
 
-/**
- * FuelScoutAgent — v4 exact restore for benchmark comparison.
- */
+
 public class FuelScoutAgent extends SmartTWAgent {
 
     private static final int MAX_EXPLORE_RADIUS = 20;
