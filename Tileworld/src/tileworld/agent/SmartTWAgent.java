@@ -384,6 +384,67 @@ public class SmartTWAgent extends TWAgent {
         return new TWThought(TWAction.MOVE, TWDirection.Z);
     }
 
+    /**
+     * Check for free opportunistic pickup/drop at the current cell.
+     * Specialists MUST call this after fuelSafetyOverride() to avoid missing
+     * zero-cost scoring actions that the base agent handles in priorities 3-4.
+     * Returns a TWThought if an action is available, otherwise null.
+     */
+    protected TWThought opportunisticAction() {
+        // Drop tile if standing on a hole
+        if (hasTile()) {
+            TWEntity objHere = smartMemory.getObjectAtCurrentPos();
+            if (objHere instanceof TWHole) {
+                return new TWThought(TWAction.PUTDOWN, TWDirection.Z);
+            }
+        }
+        // Pick up tile if standing on one and not full
+        if (carriedTiles.size() < 3) {
+            TWEntity objHere = smartMemory.getObjectAtCurrentPos();
+            if (objHere instanceof TWTile) {
+                return new TWThought(TWAction.PICKUP, TWDirection.Z);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Shared fuel safety override for specialist agents.
+     * Returns a thought when immediate refuel action is required, otherwise null.
+     */
+    protected TWThought fuelSafetyOverride() {
+        if (!smartMemory.isFuelStationKnown()) {
+            return null;
+        }
+
+        Int2D fuelPos = smartMemory.getKnownFuelStation();
+
+        // Refuel as soon as we're on station and not full.
+        if (getX() == fuelPos.x && getY() == fuelPos.y
+                && fuelLevel < Parameters.defaultFuelLevel) {
+            return new TWThought(TWAction.REFUEL, TWDirection.Z);
+        }
+
+        // Force fuel return when emergency threshold is reached.
+        if (isFuelEmergency()) {
+            planner.voidPlan();
+            if (!"fuel".equals(currentGoalType)) {
+                voidCurrentPath();
+            }
+            TWDirection dir = navigateTo(fuelPos.x, fuelPos.y, "fuel");
+            if (dir != null) {
+                return new TWThought(TWAction.MOVE, dir);
+            }
+            dir = greedyDirection(fuelPos.x, fuelPos.y);
+            if (dir != null) {
+                return new TWThought(TWAction.MOVE, dir);
+            }
+            return new TWThought(TWAction.MOVE, TWDirection.Z);
+        }
+
+        return null;
+    }
+
     @Override
     protected void act(TWThought thought) {
         switch (thought.getAction()) {

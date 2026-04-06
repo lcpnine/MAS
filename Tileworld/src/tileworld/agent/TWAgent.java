@@ -99,13 +99,15 @@ public abstract class TWAgent extends TWEntity implements Steppable {
      */
     @Override
     protected void move(TWDirection d) throws CellBlockedException {
-        if (fuelLevel <= 0) {
-        	System.out.println("Agent ran out of fuel, Score: " + this.score);
-            //Bad news, causes runtime exception
-            //throw new InsufficientFuelException("Agent ran out of fuel, Score: " + this.score);
-        } else {
-        	moveDir(d);
+        if (d == null) {
+            d = TWDirection.Z;
         }
+
+        if (fuelLevel <= 0) {
+            return;
+        }
+
+        moveDir(d);
     }
 
     /**

@@ -109,6 +109,11 @@ public class DeliveryOptimizerAgent extends SmartTWAgent {
 
     @Override
     protected TWThought think() {
+        TWThought fuelSafety = fuelSafetyOverride();
+        if (fuelSafety != null) {
+            voidCommitment();
+            return fuelSafety;
+        }
 
         // == GATE 0: FUEL DANGER ==================================================
         if (isInFuelDanger()) {
@@ -258,13 +263,16 @@ public class DeliveryOptimizerAgent extends SmartTWAgent {
 
     /**
      * Replicate SmartTWAgent's private isFuelEmergency() + computeSafetyMargin().
+     * MUST MATCH the base class computation exactly to avoid safety inconsistencies.
      */
     private boolean isInFuelDanger() {
         if (!getSmartMemory().isFuelStationKnown()) {
+            // Must match SmartTWAgent: 50% of tank when station unknown
             return fuelLevel <= Parameters.defaultFuelLevel * 0.5;
         }
         Int2D fp = getSmartMemory().getKnownFuelStation();
         int dist = Math.abs(getX() - fp.x) + Math.abs(getY() - fp.y);
+        // Match SmartTWAgent safety computation exactly.
         int margin = getSmartMemory().isLargeGrid()
                 ? (int)(dist * 2.5) + 50
                 : (int)(dist * 2.0) + 40;

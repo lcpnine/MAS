@@ -11,10 +11,11 @@ public class FuelScoutAgent extends SmartTWAgent {
     private static final int MAX_EXPLORE_RADIUS = 20;
     private static final int MIN_EXPLORE_RADIUS = 5;
     private static final double SAFETY_BUFFER_FRACTION = 0.15;
+    private static final int LARGE_GRID_MIN_FUEL_FLOOR = 110;
     private static final int COMMIT_STEPS = 8;
     private static final int MAX_COMMIT_MULTIPLIER = 3;
     private static final double POST_DISCOVERY_REFUEL_THRESHOLD = 0.70;
-    private static final int LOW_BROADCAST_INTERVAL = 10;
+    private static final int LOW_BROADCAST_INTERVAL = 4;
 
     private Int2D committedTarget = null;
     private int committedStepsRemaining = 0;
@@ -29,6 +30,11 @@ public class FuelScoutAgent extends SmartTWAgent {
 
     @Override
     protected TWThought think() {
+        TWThought fuelSafety = fuelSafetyOverride();
+        if (fuelSafety != null) {
+            return fuelSafety;
+        }
+
         boolean fuelKnown = getSmartMemory().isFuelStationKnown();
         boolean justDiscoveredStation = fuelKnown && !wasStationKnown;
         wasStationKnown = fuelKnown;
@@ -36,14 +42,29 @@ public class FuelScoutAgent extends SmartTWAgent {
         int safetyBuffer = (int) (Parameters.defaultFuelLevel * SAFETY_BUFFER_FRACTION);
 
         if (!fuelKnown) {
-            int fuelFloor = getSmartMemory().getXDim() + getSmartMemory().getYDim() + safetyBuffer;
-            if (fuelLevel <= fuelFloor) {
+            // CRITICAL FIX for Config 2: in short-lifetime envs, can't afford to wait.
+            // Use adaptive fuel floor: tighter for Config2 to maintain aggressive exploration.
+            int baseFuelFloor = getSmartMemory().getXDim() + getSmartMemory().getYDim() + safetyBuffer;
+            int adjustedFuelFloor = baseFuelFloor;
+            if (getSmartMemory().isShortLifetime() && getSmartMemory().isLargeGrid()) {
+                // Config 2: keep scouting deeper so fuel station is discovered earlier.
+                adjustedFuelFloor = Math.max(LARGE_GRID_MIN_FUEL_FLOOR, (int) (baseFuelFloor * 0.5));
+            }
+            if (fuelLevel <= adjustedFuelFloor) {
+                // Even when low, try one last greedy sweep before giving up
+                TWDirection dir = exploreGreedy();
+                if (dir != null) {
+                    return new TWThought(TWAction.MOVE, dir);
+                }
                 return new TWThought(TWAction.MOVE, TWDirection.Z);
             }
 
             double fuelFraction = fuelLevel / Parameters.defaultFuelLevel;
-            int effectiveRadius = Math.max(MIN_EXPLORE_RADIUS,
+                int effectiveRadius = Math.max(MIN_EXPLORE_RADIUS,
                     (int) (MAX_EXPLORE_RADIUS * fuelFraction));
+                if (getSmartMemory().isLargeGrid()) {
+                effectiveRadius = Math.max(effectiveRadius, 12);
+                }
 
             if (!centerVisited) {
                 int cx = getSmartMemory().getXDim() / 2;

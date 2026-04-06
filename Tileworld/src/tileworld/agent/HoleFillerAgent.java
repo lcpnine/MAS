@@ -30,6 +30,11 @@ public class HoleFillerAgent extends SmartTWAgent {
 
     @Override
     protected TWThought think() {
+        TWThought fuelSafety = fuelSafetyOverride();
+        if (fuelSafety != null) {
+            return fuelSafety;
+        }
+
         // Only intercept when planner has an active plan to validate
         if (getPlanner().hasPlan()) {
             Int2D goal = getPlanner().getCurrentGoal();

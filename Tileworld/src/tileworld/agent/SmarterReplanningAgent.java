@@ -23,6 +23,11 @@ public class SmarterReplanningAgent extends SmartTWAgent {
 
     @Override
     protected TWThought think() {
+        TWThought fuelSafety = fuelSafetyOverride();
+        if (fuelSafety != null) {
+            return fuelSafety;
+        }
+
         if (!getPlanner().hasPlan()) {
             return super.think();
         }

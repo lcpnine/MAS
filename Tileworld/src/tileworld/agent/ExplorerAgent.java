@@ -26,6 +26,11 @@ public class ExplorerAgent extends SmartTWAgent {
 
     @Override
     protected TWThought think() {
+        TWThought fuelSafety = fuelSafetyOverride();
+        if (fuelSafety != null) {
+            return fuelSafety;
+        }
+
         // Priority 0 - get to the densest hotspot only if its whithin zone and distant
         if(!hotspots.isEmpty()){
             HotspotEntry best = getBestHotspotEntry();

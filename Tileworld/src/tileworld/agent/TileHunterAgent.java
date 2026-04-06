@@ -33,6 +33,11 @@ public class TileHunterAgent extends SmartTWAgent {
 
     @Override
     protected TWThought think() {
+        TWThought fuelSafety = fuelSafetyOverride();
+        if (fuelSafety != null) {
+            return fuelSafety;
+        }
+
         int carried = getCarriedTileCount();
 
         // ADAPTIVE TILE TARGET
