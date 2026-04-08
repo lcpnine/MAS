@@ -249,10 +249,6 @@ public class SmartTWAgent extends TWAgent {
 
         // 0. FUEL STATION UNKNOWN — explore to find it, but conserve fuel if low
         if (!fuelKnown) {
-            // On large grids, conserve fuel when low to wait for FUEL broadcasts
-            if (smartMemory.isLargeGrid() && fuelLevel < Parameters.defaultFuelLevel * 0.35) {
-                return new TWThought(TWAction.MOVE, TWDirection.Z);
-            }
             TWDirection dir = exploreGreedy();
             if (dir != null) {
                 return new TWThought(TWAction.MOVE, dir);
@@ -389,7 +385,9 @@ public class SmartTWAgent extends TWAgent {
         switch (thought.getAction()) {
             case MOVE:
                 try {
-                    this.move(thought.getDirection());
+                    TWDirection moveDir = thought.getDirection();
+                    if (moveDir == null) moveDir = TWDirection.Z;
+                    this.move(moveDir);
                 } catch (CellBlockedException ex) {
                     // Path blocked — void current plan so we replan next step
                     voidCurrentPath();
@@ -427,7 +425,7 @@ public class SmartTWAgent extends TWAgent {
             int manhattanDist = Math.abs(getX() - fuelPos.x) + Math.abs(getY() - fuelPos.y);
             // Large grid + dense obstacles: need extra margin for detours
             if (smartMemory.isLargeGrid()) {
-                return (int) (manhattanDist * 2.5) + 50;
+                return (int) (manhattanDist * 2.0) + 40;
             } else {
                 return (int) (manhattanDist * 2.0) + 40;
             }
@@ -689,6 +687,20 @@ public class SmartTWAgent extends TWAgent {
 
     protected SmartTWPlanner getPlanner() {
         return planner;
+    }
+
+    // Parameterised fuel check — each specialist agent passes its own mult/buffer
+    protected TWThought fuelCheck(double mult, int buffer) {
+        if (!smartMemory.isFuelStationKnown()) return null;
+        Int2D fp = smartMemory.getKnownFuelStation();
+        if (getX() == fp.x && getY() == fp.y && fuelLevel < Parameters.defaultFuelLevel)
+            return new TWThought(TWAction.REFUEL, TWDirection.Z);
+        int dist = Math.abs(getX() - fp.x) + Math.abs(getY() - fp.y);
+        if (fuelLevel <= (int)(dist * mult) + buffer) {
+            TWDirection dir = navigateTo(fp.x, fp.y, "fuel");
+            if (dir != null) return new TWThought(TWAction.MOVE, dir);
+        }
+        return null;
     }
 
     public static Portrayal getPortrayal() {

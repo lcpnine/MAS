@@ -252,6 +252,13 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
                     if (age < Parameters.lifeTime) {
                         tiles.add((TWTile) rememberedEntities[x][y]);
                     }
+                } else if (sharedEntityType[x][y] == 1 && observationTimes[x][y] >= 0) {
+                    double age = now - observationTimes[x][y];
+                    if (age < Parameters.lifeTime) {
+                        double obsTime = observationTimes[x][y];
+                        TWTile synthetic = new TWTile(x, y, me.getEnvironment(), obsTime, obsTime + Parameters.lifeTime);
+                        tiles.add(synthetic);
+                    }
                 }
             }
         }
@@ -267,6 +274,13 @@ public class SmartTWAgentMemory extends TWAgentWorkingMemory {
                     double age = now - observationTimes[x][y];
                     if (age < Parameters.lifeTime) {
                         holes.add((TWHole) rememberedEntities[x][y]);
+                    }
+                } else if (sharedEntityType[x][y] == 2 && observationTimes[x][y] >= 0) {
+                    double age = now - observationTimes[x][y];
+                    if (age < Parameters.lifeTime) {
+                        double obsTime = observationTimes[x][y];
+                        TWHole synthetic = new TWHole(x, y, me.getEnvironment(), obsTime, obsTime + Parameters.lifeTime);
+                        holes.add(synthetic);
                     }
                 }
             }

@@ -33,6 +33,9 @@ public class TileHunterAgent extends SmartTWAgent {
 
     @Override
     protected TWThought think() {
+        TWThought testfuel = fuelCheck(1.8, 35);
+        if(testfuel!=null){return testfuel;}
+
         int carried = getCarriedTileCount();
 
         // ADAPTIVE TILE TARGET

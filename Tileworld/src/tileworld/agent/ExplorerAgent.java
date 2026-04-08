@@ -5,7 +5,7 @@ import tileworld.Parameters;
 import tileworld.environment.TWDirection;
 import tileworld.environment.TWEnvironment;
 
-/**                                                                                                                                         
+/**
  * ExplorerAgent — Systematic zone coverage - nik
  *
  * Specialization: Zone-based exploration (6 strips), hotspot bias, SWAP broadcasts when zone done
@@ -26,6 +26,9 @@ public class ExplorerAgent extends SmartTWAgent {
 
     @Override
     protected TWThought think() {
+        TWThought testfuel = fuelCheck(2.2, 50);
+        if(testfuel!=null){return testfuel;}
+
         // Priority 0 - get to the densest hotspot only if its whithin zone and distant
         if(!hotspots.isEmpty()){
             HotspotEntry best = getBestHotspotEntry();
