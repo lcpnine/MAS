@@ -420,23 +420,23 @@ All three are **shared by all 6 agents** — specialization adds behavioral prio
 
 <div class="bar-chart">
   <div class="bar-col">
-    <div class="bar" style="height:4%;background:#4a5568;">32</div>
+    <div class="bar" style="height:4%;background:#4a5568;">32.1</div>
     <div class="bar-label">Phase 1<br><em style="font-size:12px">Survive</em></div>
   </div>
   <div class="bar-col">
-    <div class="bar" style="height:18%;background:#4a7c59;">160</div>
+    <div class="bar" style="height:18%;background:#4a7c59;">160.3</div>
     <div class="bar-label">Phase 2<br><em style="font-size:12px">Plan</em></div>
   </div>
   <div class="bar-col">
-    <div class="bar" style="height:61%;background:#2563eb;">542</div>
+    <div class="bar" style="height:61%;background:#2563eb;">541.5</div>
     <div class="bar-label">Phase 3<br><em style="font-size:12px">Coordinate</em></div>
   </div>
   <div class="bar-col">
-    <div class="bar" style="height:63%;background:#3b82f6;">556</div>
+    <div class="bar" style="height:63%;background:#3b82f6;">556.1</div>
     <div class="bar-label">Phase 4<br><em style="font-size:12px">Adaptive</em></div>
   </div>
   <div class="bar-col">
-    <div class="bar" style="height:100%;background:#61dafb;color:#0f1117;">884</div>
+    <div class="bar" style="height:100%;background:#61dafb;color:#0f1117;">883.8</div>
     <div class="bar-label"><strong style="color:var(--cyan)">Final</strong><br><em style="font-size:12px">Specialists</em></div>
   </div>
 </div>
@@ -483,7 +483,7 @@ Specialization changes *what an agent prioritizes*, not how it navigates or comm
 | Agent | Focus |
 |-------|-------|
 | **FuelScout** | Finds the hidden fuel station · broadcasts `FUEL` + `LOW` to the team |
-| **Explorer** | Systematic zone coverage in 6 strips · broadcasts `SWAP` when done |
+| **Explorer** | Systematic zone coverage in 3×2 grid partition · broadcasts `SWAP` when done |
 
 ### Delivery
 | Agent | Focus |
@@ -518,7 +518,7 @@ Specialization changes *what an agent prioritizes*, not how it navigates or comm
 
 | `HOTSPOT` | Redirect exploration toward dense areas |
 |-----------|----------------------------------------|
-| `SWAP` | Reassign zones when a strip is exhausted |
+| `SWAP` | Reassign zones when a zone is exhausted |
 
 > Agents **cannot act for each other** — but shared information replicates the effect.
 
@@ -580,7 +580,7 @@ Null-direction safety and fallback movement prevent agents from locking up when 
 
 Watch for these events:
 
-1. **Zone separation** at start — 6 agents diverge into their assigned vertical strips
+1. **Zone separation** at start — 6 agents diverge into their assigned 3×2 zones
 2. **Fuel station broadcast** — `FUEL` message propagates to all agents the moment it is found
 3. **Claim deconfliction** — second agent approaching a claimed tile diverts to the next best target
 4. **Automatic replanning** — agent's goal disappears mid-path; it replans without intervention

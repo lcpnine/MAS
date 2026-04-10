@@ -4,7 +4,7 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Format per slide:**
 - **Transition** — how you hand off from the previous speaker
 - **Message** — the single thing this slide proves
-- **Points** — what to say (aim for ~90 seconds per slide)
+- **Points** — what to say (60–75 seconds for most slides; Slides 7, 8, and 9 must be compressed to cut)
 - **Cut** — one sentence to say if you're running short on time
 
 ---
@@ -102,19 +102,19 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Message:** Each phase produced a measurable jump, and each one built directly on the last.
 
 **Points:**
-> "Phase 1 was survival: fuel management and a lawnmower exploration pattern. Average reward: 32.
+> "Phase 1 was survival: fuel management and a lawnmower exploration pattern. Average reward: 32.1.
 >
-> Phase 2 added goal-directed planning with A-star. Average reward jumped to 160 — a 5x improvement just from replacing random exploration with deliberate pathfinding.
+> Phase 2 added goal-directed planning with A-star. Average reward jumped to 160.3 — a 5x improvement just from replacing random exploration with deliberate pathfinding.
 >
-> Phase 3 was the biggest single jump: zone assignment, message-based communication, and a claim system to prevent duplicate work. Reward went from 160 to 542.
+> Phase 3 was the biggest single jump: zone assignment, message-based communication, and a claim system to prevent duplicate work. Reward went from 160.3 to 541.5.
 >
-> Phase 4 introduced adaptive optimization — observation-based environment detection, opportunistic refueling, and adaptive lawnmower step size. That reached 556.
+> Phase 4 introduced adaptive optimization — observation-based environment detection, opportunistic refueling, and adaptive lawnmower step size. That reached 556.1.
 >
 > Finally, adding the six specialist agents on top of that Phase 4 base brought the system to 883.8 — the bar on the far right.
 >
 > The key point: we could measure the impact of every decision. If Phase 3 had hurt performance, we would have known immediately."
 
-**Cut:** "32 → 160 → 542 → 556 → 884. Five steps, each measurable, each additive."
+**Cut:** "32.1 → 160.3 → 541.5 → 556.1 → 883.8. Five steps, each measurable, each additive."
 
 ---
 
@@ -130,11 +130,11 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Message:** Two layers: a rock-solid shared base, and six specialists that override only what they need to.
 
 **Points:**
-> "Layer 1 is the shared base — SmartTWAgent. It contains A-star navigation, the fuel safety override, memory decay, the claim system, and all message handling.
+> "Layer 1 is the shared base — SmartTWAgent handles navigation, fuel safety, memory, and coordination for every agent.
 >
-> Layer 2 is the six specialist agents. Each one extends SmartTWAgent and overrides only the think method. Everything else is inherited.
+> Layer 2 is six specialists, each overriding only the think method. Everything else is inherited.
 >
-> This is important: specialization means changing what the agent *prioritizes*, not rebuilding how it moves, communicates, or manages fuel. That means a bug fix in the base class benefits all six agents at once."
+> A bug fix in the base class benefits all six agents at once."
 
 **Cut:** "Shared base does all the heavy lifting. Specialists only override priority logic."
 
@@ -147,13 +147,11 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Message:** Each agent has a distinct role; together they cover the full problem space.
 
 **Points:**
-> "The slide groups the six agents into three categories.
+> "Exploration: FuelScout locates the hidden station; Explorer covers the grid in a 3×2 zone partition.
 >
-> Exploration: FuelScout finds the hidden station and broadcasts its position. Explorer divides the grid into six vertical strips and systematically covers them.
+> Delivery: TileHunter and HoleFiller handle collection and delivery; DeliveryOptimizer picks the freshest feasible goal each tick.
 >
-> Delivery: TileHunter collects tiles — batching one or three depending on object lifetime. HoleFiller validates expiry before every delivery and warns teammates when targets are dying. DeliveryOptimizer picks the freshest, most feasible goal each tick.
->
-> Reliability: SmarterReplanning checks three conditions before committing to any goal — has a teammate signalled expiry, will the agent arrive in time, and can it afford the fuel round trip. If any check fails, it finds the next best option."
+> Reliability: SmarterReplanning validates every goal against expiry signal, arrival time, and fuel budget before committing."
 
 **Cut:** "Three groups: exploration, delivery, reliability. Each agent owns one job."
 
@@ -166,17 +164,15 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Message:** Agents can't act for each other — but message-passing replicates the effect.
 
 **Points:**
-> "The messages fall into three groups.
+> "Discovery: when FuelScout finds the station, a FUEL message reaches every agent within one tick — a 5-by-5 sensor becomes team-wide coverage instantly.
 >
-> Discovery: FUEL and TILE and HOLE messages turn each agent's 5-by-5 sensor into team-wide coverage. When FuelScout finds the station, every agent knows within one tick.
+> Deconfliction: a CLAIM message stops two agents pursuing the same target. A LOW message triggers early refueling before an agent goes critical.
 >
-> Deconfliction: CLAIM prevents two agents pursuing the same target. EXPIRING warns the team that a target is dying — drop it. LOW alerts teammates that an agent is fuel-critical.
->
-> Coordination: HOTSPOT redirects exploration toward dense areas. SWAP reassigns zones when one strip is exhausted.
+> Coordination: HOTSPOT and SWAP messages reallocate effort when part of the grid runs dry.
 >
 > The practical result: agents that have never seen the same cell can still avoid duplicating each other's work."
 
-**Cut:** "Discovery, deconfliction, coordination — seven messages, three jobs."
+**Cut:** "Discovery, deconfliction, coordination — eight messages, three jobs."
 
 ---
 
@@ -196,9 +192,7 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 >
 > Second: runtime environment detection. We don't read the Parameters file for classification — we infer isDense, isShortLifetime, and isLargeGrid from live observations. This is what lets us generalize to Config 3 without hardcoded thresholds.
 >
-> Third: expiry projection. Before any agent commits to a goal, it checks whether the cost to reach it exceeds 80 percent of the object's remaining lifetime. If not affordable, skip.
->
-> Fourth: fallback movement guards. Null-direction checks ensure an agent that finds no valid path can still take a safe step rather than freezing."
+> Third: expiry projection. Before any agent commits to a goal, it checks whether the cost to reach it exceeds 80 percent of the object's remaining lifetime. If not affordable, skip."
 
 **Cut:** "Fuel override, live env detection, expiry projection, and null-direction guards. Four layers of reliability."
 
@@ -220,9 +214,7 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 >
 > On Config 2: the successful runs averaged 2566 — a +42.6 percent improvement on those runs. But the failure rate rose from 20 percent to 40 percent.
 >
-> We want to be honest about that. The Config 2 failures are fuel deaths on large-grid seeds where the fuel station takes too long to discover. Our specialists optimize aggressively, but aggressive behavior backfires when the fuel station is still unknown.
->
-> The isShortLifetime detection is also a known limitation — the metric relies on observed object disappearances, which are rare in the first few hundred steps. Detection accuracy is only 20 to 30 percent early in the simulation."
+> We want to be honest about that. The Config 2 failures are fuel deaths on large-grid seeds where the fuel station takes too long to discover. Our specialists optimize aggressively, but aggressive behavior backfires when the fuel station is still unknown."
 
 **Cut:** "Config 1: +61%, zero failures. Config 2: higher peaks but more failures — fuel station discovery on large grids is the bottleneck."
 
@@ -237,7 +229,7 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Script:**
 > "This is Config 1 with a fixed seed so we see consistent behavior.
 >
-> At the start, watch the six agents — they spread out into their assigned vertical strips rather than clustering. That's the zone assignment from Phase 3.
+> At the start, watch the six agents — they spread out into their assigned 3×2 zones rather than clustering. That's the zone assignment from Phase 3.
 >
 > A few hundred steps in, one agent discovers the fuel station and immediately broadcasts a FUEL message. Watch how the other agents update their paths.
 >
@@ -256,7 +248,7 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Points:**
 > "What worked: the shared-base specialization approach. Every improvement to the base class lifted all six agents. Communication multiplied each agent's 5-by-5 sensor to cover the full grid. And building in phases meant we could measure every decision.
 >
-> What we'd fix: the Config 2 failure rate. The fuel station discovery problem on large grids needs a more aggressive early-game fuel scouting strategy. The isShortLifetime detection also needs a faster bootstrap — perhaps using object density as a proxy in the first 100 steps.
+> What we'd fix: the Config 2 failure rate. The fuel station discovery problem on large grids needs a more aggressive early-game fuel scouting strategy. The `isShortLifetime` detection also needs a faster bootstrap — the metric relies on observed disappearances, which are rare in the first few hundred steps, giving only 20–30% accuracy early on. A density-based proxy in the first 100 steps could fix this.
 >
 > If we had more time, we'd add online learning for environment classification and a negotiation protocol for dynamic zone rebalancing when one zone runs out of objects and another is overloaded."
 
