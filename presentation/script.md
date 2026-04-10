@@ -108,11 +108,13 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 >
 > Phase 3 was the biggest single jump: zone assignment, message-based communication, and a claim system to prevent duplicate work. Reward went from 160 to 542.
 >
-> Phase 4 added the six specialist agents and a round of reliability fixes. That brought us to 884 on Config 1.
+> Phase 4 introduced adaptive optimization — observation-based environment detection, opportunistic refueling, and adaptive lawnmower step size. That reached 556.
+>
+> Finally, adding the six specialist agents on top of that Phase 4 base brought the system to 883.8 — the bar on the far right.
 >
 > The key point: we could measure the impact of every decision. If Phase 3 had hurt performance, we would have known immediately."
 
-**Cut:** "32 → 160 → 542 → 884. Each phase measurable, each one additive."
+**Cut:** "32 → 160 → 542 → 556 → 884. Five steps, each measurable, each additive."
 
 ---
 
@@ -145,19 +147,15 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Message:** Each agent has a distinct role; together they cover the full problem space.
 
 **Points:**
-> "FuelScout aggressively searches for the fuel station and broadcasts its position the moment it finds it.
+> "The slide groups the six agents into three categories.
 >
-> TileHunter adapts its batching strategy — it collects one tile in short-lifetime environments and three tiles in stable ones, to match delivery feasibility to object longevity.
+> Exploration: FuelScout finds the hidden station and broadcasts its position. Explorer divides the grid into six vertical strips and systematically covers them.
 >
-> HoleFiller projects expiry before committing to a delivery, and broadcasts EXPIRING signals to the team.
+> Delivery: TileHunter collects tiles — batching one or three depending on object lifetime. HoleFiller validates expiry before every delivery and warns teammates when targets are dying. DeliveryOptimizer picks the freshest, most feasible goal each tick.
 >
-> Explorer divides the grid into six vertical strips, one per agent, and broadcasts a SWAP signal when its zone is fully covered.
->
-> DeliveryOptimizer uses a seven-gate cascade to pick the freshest, most feasible goal each tick.
->
-> SmarterReplanning runs three checks before committing to any goal: has a teammate signalled expiry? Will the agent arrive before the object dies? Can it afford the round trip?"
+> Reliability: SmarterReplanning checks three conditions before committing to any goal — has a teammate signalled expiry, will the agent arrive in time, and can it afford the fuel round trip. If any check fails, it finds the next best option."
 
-**Cut:** "Each agent has one primary job. Together they cover fuel, collection, delivery, coverage, throughput, and reliability."
+**Cut:** "Three groups: exploration, delivery, reliability. Each agent owns one job."
 
 ---
 
@@ -168,17 +166,17 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Message:** Agents can't act for each other — but message-passing replicates the effect.
 
 **Points:**
-> "We use seven message types. FUEL lets every agent know the station's position the moment FuelScout finds it — without this, other agents might run dry before they discover it themselves.
+> "The messages fall into three groups.
 >
-> TILE and HOLE messages populate each agent's memory with observations from the full team, effectively multiplying each 5-by-5 sensor across the whole grid.
+> Discovery: FUEL and TILE and HOLE messages turn each agent's 5-by-5 sensor into team-wide coverage. When FuelScout finds the station, every agent knows within one tick.
 >
-> CLAIM prevents duplicate work — when an agent targets a tile, it broadcasts a claim and others skip that tile.
+> Deconfliction: CLAIM prevents two agents pursuing the same target. EXPIRING warns the team that a target is dying — drop it. LOW alerts teammates that an agent is fuel-critical.
 >
-> EXPIRING and LOW are safety signals. HOTSPOT and SWAP are coordination signals for routing and zone management.
+> Coordination: HOTSPOT redirects exploration toward dense areas. SWAP reassigns zones when one strip is exhausted.
 >
-> The underlying principle from MAS theory: agents have individual goals but can't act for each other. Shared information is the only mechanism available. We built a message schema that covers every situation where one agent's knowledge would change another agent's decision."
+> The practical result: agents that have never seen the same cell can still avoid duplicating each other's work."
 
-**Cut:** "Seven message types covering fuel, discovery, claims, and coordination. Information sharing replicates physical cooperation."
+**Cut:** "Discovery, deconfliction, coordination — seven messages, three jobs."
 
 ---
 
@@ -207,7 +205,7 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 ---
 
 ## Speaker 6 — Slides 10–12 (Results + Demo + Takeaways)
-*~4 minutes*
+*~5 minutes — budget: 1.5 min results · 2 min demo (pre-recorded by default) · 1 min takeaways · 0.5 min buffer*
 
 ---
 
@@ -218,9 +216,9 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Message:** Config 1 improved significantly and reliably. Config 2 exposes a remaining bottleneck.
 
 **Points:**
-> "On Config 1: 883.8 average over 10 runs, ranging from 801 to 1003. Zero failures. That's a 60 percent improvement over the pre-specialization baseline of 548.
+> "On Config 1: 883.8 average over 10 runs, ranging from 801 to 1003. Zero failures. That's a +61.0 percent improvement over the pre-specialization baseline of 548.9.
 >
-> On Config 2: the successful runs averaged 2566 — a 42 percent improvement on those runs. But the failure rate rose from 20 percent to 40 percent.
+> On Config 2: the successful runs averaged 2566 — a +42.6 percent improvement on those runs. But the failure rate rose from 20 percent to 40 percent.
 >
 > We want to be honest about that. The Config 2 failures are fuel deaths on large-grid seeds where the fuel station takes too long to discover. Our specialists optimize aggressively, but aggressive behavior backfires when the fuel station is still unknown.
 >
@@ -290,4 +288,10 @@ Demo seed: use `Parameters.seed = 4162012` (existing default)
 | 6 | 10–12 + demo | 5 min |
 | **Total** | | **20 min** |
 
-*For 15-minute slot: cut Speaker 4's Slide 6 (architecture overview) to 1 minute, and compress demo to 2 minutes.*
+*For 15-minute slot:*
+- *Speaker 1 (slides 1–3): 3 min — cut one bullet per slide*
+- *Speaker 2 (slide 4): 2 min*
+- *Speaker 3 (slide 5): 2 min*
+- *Speaker 4 (slides 6–8): 3 min — skip Slide 6 verbal walkthrough (show diagram only); on Slide 7 name the three groups only, no per-agent detail; on Slide 8 read one example per group only*
+- *Speaker 5 (slide 9): 1.5 min — drop fallback movement guards bullet*
+- *Speaker 6 (slides 10–12 + demo): 3.5 min — 1 min results, 2 min pre-recorded demo, 0.5 min takeaways*

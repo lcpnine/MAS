@@ -420,20 +420,24 @@ All three are **shared by all 6 agents** — specialization adds behavioral prio
 
 <div class="bar-chart">
   <div class="bar-col">
-    <div class="bar" style="height:6%;background:#4a5568;">32</div>
-    <div class="bar-label">Phase 1<br><em style="font-size:13px">Survive</em></div>
+    <div class="bar" style="height:4%;background:#4a5568;">32</div>
+    <div class="bar-label">Phase 1<br><em style="font-size:12px">Survive</em></div>
   </div>
   <div class="bar-col">
-    <div class="bar" style="height:17%;background:#4a7c59;">160</div>
-    <div class="bar-label">Phase 2<br><em style="font-size:13px">Plan</em></div>
+    <div class="bar" style="height:18%;background:#4a7c59;">160</div>
+    <div class="bar-label">Phase 2<br><em style="font-size:12px">Plan</em></div>
   </div>
   <div class="bar-col">
-    <div class="bar" style="height:60%;background:#2563eb;">542</div>
-    <div class="bar-label">Phase 3<br><em style="font-size:13px">Coordinate</em></div>
+    <div class="bar" style="height:61%;background:#2563eb;">542</div>
+    <div class="bar-label">Phase 3<br><em style="font-size:12px">Coordinate</em></div>
+  </div>
+  <div class="bar-col">
+    <div class="bar" style="height:63%;background:#3b82f6;">556</div>
+    <div class="bar-label">Phase 4<br><em style="font-size:12px">Adaptive</em></div>
   </div>
   <div class="bar-col">
     <div class="bar" style="height:100%;background:#61dafb;color:#0f1117;">884</div>
-    <div class="bar-label">Phase 4<br><em style="font-size:13px">Specialize</em></div>
+    <div class="bar-label"><strong style="color:var(--cyan)">Final</strong><br><em style="font-size:12px">Specialists</em></div>
   </div>
 </div>
 
@@ -442,7 +446,8 @@ All three are **shared by all 6 agents** — specialization adds behavioral prio
 | 1 · Survive | Fuel management + lawnmower exploration | 32.1 |
 | 2 · Plan | A* pathfinding + tile/hole delivery | 160.3 |
 | 3 · Coordinate | Zone assignment + messaging + claim system | 541.5 |
-| **4 · Specialize** | **6 specialist agents + reliability fixes** | **883.8** |
+| 4 · Adaptive | Env detection, adaptive margins, opportunistic refuel | 556.1 |
+| **Final · Specialists** | **6 specialist agents added on Phase 4 base** | **883.8** |
 
 ---
 
@@ -474,32 +479,48 @@ Specialization changes *what an agent prioritizes*, not how it navigates or comm
 
 ## The 6 Agents
 
-| Agent | Role | Key Behavior |
-|-------|------|-------------|
-| **FuelScout** | Fuel discovery | Aggressive station search · broadcasts `LOW` alerts |
-| **TileHunter** | Tile collection | Batches 1 tile (short-life) or 3 tiles (long-life) |
-| **HoleFiller** | Reliable delivery | Expiry projection before committing · broadcasts `EXPIRING` |
-| **Explorer** | Zone coverage | 6 vertical strips · broadcasts `SWAP` on completion |
-| **DeliveryOptimizer** | Throughput | 7-gate freshness cascade · cluster-density routing |
-| **SmarterReplanning** | Failure avoidance | 3-check pre-commitment: expiry signal · arrival time · fuel budget |
+### Exploration
+| Agent | Focus |
+|-------|-------|
+| **FuelScout** | Finds the hidden fuel station · broadcasts `FUEL` + `LOW` to the team |
+| **Explorer** | Systematic zone coverage in 6 strips · broadcasts `SWAP` when done |
+
+### Delivery
+| Agent | Focus |
+|-------|-------|
+| **TileHunter** | Collects tiles · batches adaptively (1 short-life / 3 long-life) |
+| **HoleFiller** | Delivers tiles · validates expiry before committing · broadcasts `EXPIRING` |
+| **DeliveryOptimizer** | Maximises throughput · freshness-first selection · cluster routing |
+
+### Reliability
+| Agent | Focus |
+|-------|-------|
+| **SmarterReplanning** | Validates every goal: expiry signal? arrival time? fuel budget? |
 
 ---
 
 ## Communication & Coordination
 
-| Message | Sender | Effect on Receivers |
-|---------|--------|---------------------|
-| `FUEL` | FuelScout | All agents update stored fuel station position |
-| `TILE` / `HOLE` | Any | Populate shared memory with remote observations |
-| `CLAIM` | Any | Others skip this target — prevents duplicate work |
-| `LOW` | FuelScout | Nearby agents aware of fuel-critical agent |
-| `EXPIRING` | HoleFiller | Others drop targets that are about to vanish |
-| `HOTSPOT` | DeliveryOptimizer | Bias exploration toward high-density areas |
-| `SWAP` | Explorer | Reassign zones when one strip is exhausted |
+**Discovery** — multiply each agent's 5×5 sensor across the full grid
 
-<br>
+| `FUEL` | Station position shared instantly on discovery |
+|--------|-----------------------------------------------|
+| `TILE` / `HOLE` | Remote sightings populate every agent's memory |
 
-> Agents **cannot act for each other** — but shared information replicates the effect across the team.
+**Deconfliction** — prevent wasted work
+
+| `CLAIM` | Skip already-targeted objects |
+|---------|-------------------------------|
+| `EXPIRING` | Skip objects about to vanish |
+| `LOW` | Alert team to a fuel-critical agent |
+
+**Coordination** — optimise collective coverage
+
+| `HOTSPOT` | Redirect exploration toward dense areas |
+|-----------|----------------------------------------|
+| `SWAP` | Reassign zones when a strip is exhausted |
+
+> Agents **cannot act for each other** — but shared information replicates the effect.
 
 ---
 
@@ -510,8 +531,13 @@ Specialization changes *what an agent prioritizes*, not how it navigates or comm
 Fuel emergency overrides all specialist logic — no agent can starve itself.
 
 ### Runtime Environment Detection
-`isDense()` · `isShortLifetime()` · `isLargeGrid()` inferred from **live observations only** — no hardcoded `Parameters` reads.
-Enables graceful adaptation to the unknown **Config 3**.
+`isDense()` · `isShortLifetime()` · `isLargeGrid()` inferred from **live observations only** — no hardcoded `Parameters` reads. Validated across 5 hypothetical Config 3 scenarios:
+
+| Detector | Accuracy | Note |
+|----------|----------|------|
+| `isDense()` | **100%** | Normalised object density per sensor step |
+| `isLargeGrid()` | **100%** | Direct dimension threshold (≥70) |
+| `isShortLifetime()` | **~20–30%** early | Improves over time; few disappearances observed early |
 
 ### Expiry Projection
 Before committing to a goal: `costToGoal > remainingLifetime × 0.8` → skip.
@@ -529,7 +555,7 @@ Null-direction safety and fallback movement prevent agents from locking up when 
     <div class="metric">883.8</div>
     <div class="sublabel">Config 1 avg reward · 10 runs</div>
     <div style="margin-top:10px;font-size:17px">Range: 801–1003 &nbsp;·&nbsp; <strong style="color:var(--green)">0% failures</strong></div>
-    <div style="font-size:15px;color:var(--fg-dim);margin-top:4px">+60.7% vs pre-specialization baseline (548.9)</div>
+    <div style="font-size:15px;color:var(--fg-dim);margin-top:4px">+61.0% vs pre-specialization baseline (548.9)</div>
   </div>
   <div class="result-card warn">
     <div class="metric">1539.6</div>
