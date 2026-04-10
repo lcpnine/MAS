@@ -75,7 +75,7 @@
 | Baseline Failures | 0% | 20% |
 | Final Failures | 0% | 40% |
 
-**Key Insight:** Config 1 improved significantly (+60.7%) with zero failures. Config 2 peak scores increased (~2566 on successful runs, +42.6%) but failure rate worsened from 20% to 40% — specialists optimise aggressively but the Config 2 large-grid fuel discovery problem remains unsolved.
+**Key Insight:** Config 1 improved significantly (+61.0%) with zero failures. Config 2 peak scores increased (~2566 on successful runs, +42.6%) but failure rate worsened from 20% to 40% — specialists optimise aggressively but the Config 2 large-grid fuel discovery problem remains unsolved.
 
 ---
 
