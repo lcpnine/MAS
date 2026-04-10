@@ -100,7 +100,7 @@
 | 10 | 1521039410 | 879 |
 
 **Config 1 Final:**
-- **Average:** 883.8 (+60.7% vs baseline 548.9)
+- **Average:** 883.8 (+61.0% vs baseline 548.9)
 - **Range:** 801–1003
 - **Failure Rate:** 0%
 - **Status:** ✅ Consistent improvement, zero failures
