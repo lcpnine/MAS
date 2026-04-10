@@ -163,6 +163,8 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 
 **Message:** Agents can't act for each other — but message-passing replicates the effect.
 
+*Speaker note: The slide displays all 8 message labels as a reference table — you only need to speak one example per group. Do not read the labels aloud.*
+
 **Points:**
 > "Discovery: when FuelScout finds the station, a FUEL message reaches every agent within one tick — a 5-by-5 sensor becomes team-wide coverage instantly.
 >
@@ -190,9 +192,11 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Points:**
 > "First: the fuel safety override. It fires at the very top of every think call, before any specialist logic runs. An agent heading to a fuel station cannot be redirected by any other priority.
 >
-> Second: runtime environment detection. We don't read the Parameters file for classification — we infer isDense, isShortLifetime, and isLargeGrid from live observations. This is what lets us generalize to Config 3 without hardcoded thresholds.
+> Second: runtime environment detection. We don't read the Parameters file for classification — we infer isDense, isShortLifetime, and isLargeGrid from live observations. Across five hypothetical Config 3 scenarios, isDense and isLargeGrid were 100% correct; only short-lifetime detection lagged in the early steps.
 >
-> Third: expiry projection. Before any agent commits to a goal, it checks whether the cost to reach it exceeds 80 percent of the object's remaining lifetime. If not affordable, skip."
+> Third: expiry projection. Before any agent commits to a goal, it checks whether the cost to reach it exceeds 80 percent of the object's remaining lifetime. If not affordable, skip.
+>
+> Fourth: fallback movement guards. Null-direction checks ensure agents never freeze when no valid path exists — they always take a safe step."
 
 **Cut:** "Fuel override, live env detection, expiry projection, and null-direction guards. Four layers of reliability."
 
@@ -212,11 +216,11 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Points:**
 > "On Config 1: 883.8 average over 10 runs, ranging from 801 to 1003. Zero failures. That's a +61.0 percent improvement over the pre-specialization baseline of 548.9.
 >
-> On Config 2: the successful runs averaged 2566 — a +42.6 percent improvement on those runs. But the failure rate rose from 20 percent to 40 percent.
+> On Config 2: the successful runs averaged 2566.0 — a +42.6 percent improvement over the baseline successful-run average of 1799.9. But the failure rate rose from 20 percent to 40 percent.
 >
 > We want to be honest about that. The Config 2 failures are fuel deaths on large-grid seeds where the fuel station takes too long to discover. Our specialists optimize aggressively, but aggressive behavior backfires when the fuel station is still unknown."
 
-**Cut:** "Config 1: +61%, zero failures. Config 2: higher peaks but more failures — fuel station discovery on large grids is the bottleneck."
+**Cut:** "Config 1: +61%, zero failures. Config 2: successful runs +42.6% but failure rate doubled — fuel station discovery on large grids is the bottleneck."
 
 ---
 
@@ -248,7 +252,7 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Points:**
 > "What worked: the shared-base specialization approach. Every improvement to the base class lifted all six agents. Communication multiplied each agent's 5-by-5 sensor to cover the full grid. And building in phases meant we could measure every decision.
 >
-> What we'd fix: the Config 2 failure rate. The fuel station discovery problem on large grids needs a more aggressive early-game fuel scouting strategy. The `isShortLifetime` detection also needs a faster bootstrap — the metric relies on observed disappearances, which are rare in the first few hundred steps, giving only 20–30% accuracy early on. A density-based proxy in the first 100 steps could fix this.
+> What we'd fix: the Config 2 failure rate. The fuel station discovery problem on large grids needs a more aggressive early-game fuel scouting strategy. The `isShortLifetime` detection also needs a faster bootstrap — it classifies long-lifetime environments correctly, but short-lifetime detection is only ~20–30% in the first few hundred steps. A density-based proxy in the first 100 steps could fix this.
 >
 > If we had more time, we'd add online learning for environment classification and a negotiation protocol for dynamic zone rebalancing when one zone runs out of objects and another is overloaded."
 
@@ -280,10 +284,12 @@ Demo seed: use `Parameters.seed = 4162012` (existing default)
 | 6 | 10–12 + demo | 5 min |
 | **Total** | | **20 min** |
 
+*Target 18–19 min of spoken content — six speaker transitions will consume the remaining 1–2 min. If running over, pre-cut one beat each from Slide 5 (drop the "key point" sentence), Slide 8 (drop the Coordination example), and the demo narration (drop the replanning beat).*
+
 *For 15-minute slot:*
 - *Speaker 1 (slides 1–3): 3 min — cut one bullet per slide*
 - *Speaker 2 (slide 4): 2 min*
 - *Speaker 3 (slide 5): 2 min*
-- *Speaker 4 (slides 6–8): 3 min — skip Slide 6 verbal walkthrough (show diagram only); on Slide 7 name the three groups only, no per-agent detail; on Slide 8 read one example per group only*
+- *Speaker 4 (slides 6–8): 3 min — skip Slide 6 verbal walkthrough (show diagram only); on Slide 7 name the three groups only; on Slide 8 read one example per group only*
 - *Speaker 5 (slide 9): 1.5 min — drop fallback movement guards bullet*
-- *Speaker 6 (slides 10–12 + demo): 3.5 min — 1 min results, 2 min pre-recorded demo, 0.5 min takeaways*
+- *Speaker 6 (slides 10–12 + demo): 3.5 min — 1 min results, 2 min pre-recorded demo (zone separation + fuel broadcast only), 0.5 min takeaways*
