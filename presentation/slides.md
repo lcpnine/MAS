@@ -560,7 +560,7 @@ Null-direction safety and fallback movement prevent agents from locking up when 
   <div class="result-card warn">
     <div class="metric">1539.6</div>
     <div class="sublabel">Config 2 avg reward · 10 runs</div>
-    <div style="margin-top:10px;font-size:17px">Success avg: 2566 &nbsp;·&nbsp; <strong style="color:var(--red)">40% failures</strong></div>
+    <div style="margin-top:10px;font-size:17px">Success avg: 2566.0 &nbsp;·&nbsp; <strong style="color:var(--red)">40% failures</strong></div>
     <div style="font-size:15px;color:var(--fg-dim);margin-top:4px">Successful-run avg: +42.6% vs baseline successful-run avg (1799.9) · failure rate 20% → 40%</div>
   </div>
 </div>

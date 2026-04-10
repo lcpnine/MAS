@@ -104,7 +104,7 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Points:**
 > "Phase 1 was survival: fuel management and a lawnmower exploration pattern. Average reward: 32.1.
 >
-> Phase 2 added goal-directed planning with A-star. Average reward jumped to 160.3 — a 5x improvement just from replacing random exploration with deliberate pathfinding.
+> Phase 2 added goal-directed planning with A-star. Average reward jumped to 160.3 — about 5x improvement just from replacing random exploration with deliberate pathfinding.
 >
 > Phase 3 was the biggest single jump: zone assignment, message-based communication, and a claim system to prevent duplicate work. Reward went from 160.3 to 541.5.
 >
@@ -130,11 +130,7 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Message:** Two layers: a rock-solid shared base, and six specialists that override only what they need to.
 
 **Points:**
-> "Layer 1 is the shared base — SmartTWAgent handles navigation, fuel safety, memory, and coordination for every agent.
->
-> Layer 2 is six specialists, each overriding only the think method. Everything else is inherited.
->
-> A bug fix in the base class benefits all six agents at once."
+> "Two layers: a shared base that every agent inherits — navigation, fuel safety, memory, messaging — and six specialists that override only what they need. A fix to the base lifts all six at once."
 
 **Cut:** "Shared base does all the heavy lifting. Specialists only override priority logic."
 
@@ -194,9 +190,7 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 >
 > Second: runtime environment detection. We don't read the Parameters file for classification — we infer isDense, isShortLifetime, and isLargeGrid from live observations. Across five hypothetical Config 3 scenarios, isDense and isLargeGrid were 100% correct; only short-lifetime detection lagged in the early steps.
 >
-> Third: expiry projection. Before any agent commits to a goal, it checks whether the cost to reach it exceeds 80 percent of the object's remaining lifetime. If not affordable, skip.
->
-> Fourth: fallback movement guards. Null-direction checks ensure agents never freeze when no valid path exists — they always take a safe step."
+> Third and fourth: expiry projection skips any goal the agent can't reach before 80 percent of its lifetime expires; fallback movement guards ensure agents never freeze when no valid path exists."
 
 **Cut:** "Fuel override, live env detection, expiry projection, and null-direction guards. Four layers of reliability."
 
@@ -216,7 +210,7 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Points:**
 > "On Config 1: 883.8 average over 10 runs, ranging from 801 to 1003. Zero failures. That's a +61.0 percent improvement over the pre-specialization baseline of 548.9.
 >
-> On Config 2: the successful runs averaged 2566.0 — a +42.6 percent improvement over the baseline successful-run average of 1799.9. But the failure rate rose from 20 percent to 40 percent.
+> On Config 2: the overall average is 1539.6 across all 10 runs — 4 runs failed with zero score. The successful runs averaged 2566.0, a +42.6 percent improvement over the baseline successful-run average of 1799.9. But the failure rate rose from 20 percent to 40 percent.
 >
 > We want to be honest about that. The Config 2 failures are fuel deaths on large-grid seeds where the fuel station takes too long to discover. Our specialists optimize aggressively, but aggressive behavior backfires when the fuel station is still unknown."
 
@@ -252,7 +246,7 @@ AI6125 · NTU · 2026 · 15–20 minute slot
 **Points:**
 > "What worked: the shared-base specialization approach. Every improvement to the base class lifted all six agents. Communication multiplied each agent's 5-by-5 sensor to cover the full grid. And building in phases meant we could measure every decision.
 >
-> What we'd fix: the Config 2 failure rate. The fuel station discovery problem on large grids needs a more aggressive early-game fuel scouting strategy. The `isShortLifetime` detection also needs a faster bootstrap — it classifies long-lifetime environments correctly, but short-lifetime detection is only ~20–30% in the first few hundred steps. A density-based proxy in the first 100 steps could fix this.
+> What we'd fix: the Config 2 failure rate. The fuel station discovery problem on large grids needs a more aggressive early-game fuel scouting strategy. The `isShortLifetime` detection also needs a faster bootstrap — it classifies long-lifetime environments correctly, but short-lifetime detection is only ~20–30% by step 50, then improves over time. A density-based proxy in the first 100 steps could fix this.
 >
 > If we had more time, we'd add online learning for environment classification and a negotiation protocol for dynamic zone rebalancing when one zone runs out of objects and another is overloaded."
 
@@ -276,20 +270,22 @@ Demo seed: use `Parameters.seed = 4162012` (existing default)
 
 | Speaker | Slides | Target |
 |---------|--------|--------|
-| 1 | 1–3 | 4 min |
+| 1 | 1–3 | 3.5 min |
 | 2 | 4 | 2.5 min |
 | 3 | 5 | 2.5 min |
 | 4 | 6–8 | 4 min |
 | 5 | 9 | 2 min |
-| 6 | 10–12 + demo | 5 min |
+| 6 | 10–12 + demo | 5.5 min |
 | **Total** | | **20 min** |
 
-*Target 18–19 min of spoken content — six speaker transitions will consume the remaining 1–2 min. If running over, pre-cut one beat each from Slide 5 (drop the "key point" sentence), Slide 8 (drop the Coordination example), and the demo narration (drop the replanning beat).*
+*Target 18–19 min of spoken content — five speaker handoffs will consume the remaining 1–2 min. If running over, pre-cut one beat each from Slide 5 (drop the "key point" sentence), Slide 8 (drop the Coordination example), and the demo narration (drop the replanning beat).*
+
+*Slide 13 (Thank You) is a non-speaking Q&A visual — no script needed, but account for it when advancing slides at the end of Slide 12.*
 
 *For 15-minute slot:*
 - *Speaker 1 (slides 1–3): 3 min — cut one bullet per slide*
 - *Speaker 2 (slide 4): 2 min*
 - *Speaker 3 (slide 5): 2 min*
 - *Speaker 4 (slides 6–8): 3 min — skip Slide 6 verbal walkthrough (show diagram only); on Slide 7 name the three groups only; on Slide 8 read one example per group only*
-- *Speaker 5 (slide 9): 1.5 min — drop fallback movement guards bullet*
+- *Speaker 5 (slide 9): 1.5 min — drop fallback movement guards from spoken script*
 - *Speaker 6 (slides 10–12 + demo): 3.5 min — 1 min results, 2 min pre-recorded demo (zone separation + fuel broadcast only), 0.5 min takeaways*
