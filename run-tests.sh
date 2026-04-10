@@ -47,8 +47,7 @@ build_and_run() {
   local label="$1"
   echo "=== ${label} ==="
 
-  mapfile -t files < <(find Tileworld/src -type f -name "*.java")
-  "$JAVAC" -cp "lib/MASON_14.jar" -d "Tileworld/bin" "${files[@]}"
+  find Tileworld/src -type f -name "*.java" | xargs "$JAVAC" -cp "lib/MASON_14.jar" -d "Tileworld/bin"
 
   local log_file="$LOG_DIR/${label}-$(date +%Y%m%d-%H%M%S).log"
   "$JAVA" -cp "Tileworld/bin${CP_SEP}lib/MASON_14.jar" tileworld.TileworldMain | tee "$log_file"

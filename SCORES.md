@@ -70,16 +70,61 @@
 | Object Lifetime | 100 | 30 |
 | Object Density | 0.2 mean (sparse) | 2.0 mean (dense) |
 | Fuel Capacity | 500 | 500 |
-| **Avg Score** | **548.9** | **1439.9** |
-| Failures | 0% | 20% |
+| **Baseline Avg** | **548.9** | **1439.9** |
+| **Final Avg** | **883.8** | **1539.6** |
+| Baseline Failures | 0% | 20% |
+| Final Failures | 0% | 40% |
 
-**Key Insight:** Config 2 has higher scoring potential but is much more challenging due to rapid object expiration, larger search space, and information overload.
+**Key Insight:** Config 1 improved significantly (+60.7%) with zero failures. Config 2 peak scores increased (~2566 on successful runs, +42.6%) but failure rate worsened from 20% to 40% — specialists optimise aggressively but the Config 2 large-grid fuel discovery problem remains unsolved.
 
 ---
 
 ## Final Results (After All Agent Specializations Implemented)
 
-*To be added after all 6 agents have been implemented*
+**Date:** 2026-04-10
+**Configuration:** All 6 specialist agents active (FuelScout, TileHunter, HoleFiller, Explorer, DeliveryOptimizer, SmarterReplanning)
+
+### Config 1: Final Scores
+
+| Run | Seed | Score |
+|-----|------|-------|
+| 1 | 1780338918 | 1003 |
+| 2 | 1231410861 | 821 |
+| 3 | 101695460 | 847 |
+| 4 | 41646663 | 858 |
+| 5 | 595275871 | 801 |
+| 6 | 647214690 | 847 |
+| 7 | 250373607 | 977 |
+| 8 | 942406077 | 825 |
+| 9 | 1457024394 | 980 |
+| 10 | 1521039410 | 879 |
+
+**Config 1 Final:**
+- **Average:** 883.8 (+60.7% vs baseline 548.9)
+- **Range:** 801–1003
+- **Failure Rate:** 0%
+- **Status:** ✅ Consistent improvement, zero failures
+
+### Config 2: Final Scores
+
+| Run | Seed | Score |
+|-----|------|-------|
+| 1 | 348125492 | 0 ❌ |
+| 2 | 1679860796 | 2605 |
+| 3 | 1133029664 | 2593 |
+| 4 | 1674742454 | 2645 |
+| 5 | 1577092082 | 0 ❌ |
+| 6 | 939021519 | 2496 |
+| 7 | 961758693 | 0 ❌ |
+| 8 | 464230032 | 2600 |
+| 9 | 446586957 | 0 ❌ |
+| 10 | 916130063 | 2457 |
+
+**Config 2 Final:**
+- **Average:** 1539.6 (excluding failures: 2566.0)
+- **Range:** 0–2645
+- **Failure Rate:** 40% (4/10 runs) — worse than baseline 20%
+- **Status:** ⚠️ Higher peak scores but increased failure rate vs baseline
 
 ---
 
