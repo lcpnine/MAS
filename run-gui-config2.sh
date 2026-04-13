@@ -17,33 +17,27 @@ case "$(uname -s)" in
   *) CP_SEP=':' ;;
 esac
 
-PARAMS_FILE="Tileworld/src/tileworld/Parameters.java"
-PARAMS_BAK="${PARAMS_FILE}.bak"
+# Only environment-layer files are switched to Parameters2.
+# Agent/planner files keep Parameters.lifeTime=100 as their planning horizon.
+ENV_FILE="Tileworld/src/tileworld/environment/TWEnvironment.java"
+OBJCREATOR_FILE="Tileworld/src/tileworld/environment/TWObjectCreator.java"
+ENV_BAK="${ENV_FILE}.bak"
+OBJCREATOR_BAK="${OBJCREATOR_FILE}.bak"
 
-restore() {
-  if [[ -f "$PARAMS_BAK" ]]; then
-    mv "$PARAMS_BAK" "$PARAMS_FILE"
-    echo "Restored Parameters.java to Config 1"
-  fi
+restore_files() {
+  if [[ -f "$ENV_BAK" ]]; then mv -f "$ENV_BAK" "$ENV_FILE"; fi
+  if [[ -f "$OBJCREATOR_BAK" ]]; then mv -f "$OBJCREATOR_BAK" "$OBJCREATOR_FILE"; fi
+  echo "Restored environment files to Config 1"
 }
-trap restore EXIT
+trap restore_files EXIT
 
-cp "$PARAMS_FILE" "$PARAMS_BAK"
+cp -f "$ENV_FILE" "$ENV_BAK"
+cp -f "$OBJCREATOR_FILE" "$OBJCREATOR_BAK"
 
 echo "=== Config 2: 80x80 dense (lifetime 30) ==="
 
-# Patch dimensions and spawn rates
-sed -i '' \
-  -e 's/int xDimension = 50/int xDimension = 80/' \
-  -e 's/int yDimension = 50/int yDimension = 80/' \
-  -e 's/double tileMean = 0\.2/double tileMean = 2.0/' \
-  -e 's/double holeMean = 0\.2/double holeMean = 2.0/' \
-  -e 's/double obstacleMean = 0\.2/double obstacleMean = 2.0/' \
-  -e 's/double tileDev = 0\.05f/double tileDev = 0.5f/' \
-  -e 's/double holeDev = 0\.05f/double holeDev = 0.5f/' \
-  -e 's/double obstacleDev = 0\.05f/double obstacleDev = 0.5f/' \
-  -e 's/int lifeTime = 100/int lifeTime = 30/' \
-  "$PARAMS_FILE"
+perl -0777 -i -pe 's/import\s+tileworld\.Parameters;/import tileworld.Parameters2;/g; s/\bParameters\./Parameters2./g' "$ENV_FILE"
+perl -0777 -i -pe 's/import\s+tileworld\.Parameters;/import tileworld.Parameters2;/g; s/\bParameters\./Parameters2./g' "$OBJCREATOR_FILE"
 
 mkdir -p Tileworld/bin
 find Tileworld/src -name "*.java" | xargs "$JAVAC" -cp "lib/MASON_14.jar" -d Tileworld/bin
