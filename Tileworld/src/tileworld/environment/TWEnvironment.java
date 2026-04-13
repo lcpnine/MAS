@@ -103,6 +103,7 @@ public class TWEnvironment extends SimState implements Steppable {
     @Override
     public void start() {
         super.start();
+        reward = 0;
         //create my grid
         this.objectGrid = new ObjectGrid2D(getxDimension(), getyDimension());
         this.agentGrid = new ObjectGrid2D(getxDimension(), getyDimension());

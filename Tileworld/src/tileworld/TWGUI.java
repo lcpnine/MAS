@@ -176,6 +176,11 @@ public class TWGUI extends GUIState {
     public void start() {
         super.start();
         setupPortrayals();
+        stepLabel.setText("Step: 0 / " + Parameters.endTime);
+        stepLabel.setForeground(Color.white);
+        scoreLabel.setText("Score: 0");
+        scoreLabel.setForeground(new Color(80, 220, 80));
+        if (displayFrame != null) displayFrame.setTitle("TileWorld");
 
         // Delay steppable — runs first (ordering -1) to throttle simulation speed
         state.schedule.scheduleRepeating(Schedule.EPOCH, -1, new Steppable() {
