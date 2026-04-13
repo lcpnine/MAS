@@ -116,23 +116,10 @@ public class TWEnvironment extends SimState implements Steppable {
         schedule.scheduleRepeating(this, 1, 1.0);
         
         //Now we create some agents
-        Int2D pos;
-        pos = this.generateRandomLocation();
-        createAgent(new FuelScoutAgent("FuelScout", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 0));
-        pos = this.generateRandomLocation();
-        createAgent(new TileHunterAgent("TileHunter", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 1));
-        pos = this.generateRandomLocation();
-        createAgent(new HoleFillerAgent("HoleFiller", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 2));
-        pos = this.generateRandomLocation();
-        createAgent(new ExplorerAgent("Explorer", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 3));
-        pos = this.generateRandomLocation();
-        createAgent(new DeliveryOptimizerAgent("DeliveryOptimizer", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 4));
-        pos = this.generateRandomLocation();
-        createAgent(new SmarterReplanningAgent("SmarterReplanning", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 5));
-        
-//        
+        createAgents();
+
         //create the fueling station
-        pos = this.generateRandomLocation();
+        Int2D pos = this.generateRandomLocation();
         fuelingStation = new TWFuelStation(pos.getX(), pos.getY(),this);
 
 
@@ -379,7 +366,23 @@ public class TWEnvironment extends SimState implements Steppable {
      * 
      * @param a 
      */
-    private void createAgent(TWAgent a) {
+    protected void createAgents() {
+        Int2D pos;
+        pos = this.generateRandomLocation();
+        createAgent(new FuelScoutAgent("FuelScout", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 0));
+        pos = this.generateRandomLocation();
+        createAgent(new TileHunterAgent("TileHunter", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 1));
+        pos = this.generateRandomLocation();
+        createAgent(new HoleFillerAgent("HoleFiller", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 2));
+        pos = this.generateRandomLocation();
+        createAgent(new ExplorerAgent("Explorer", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 3));
+        pos = this.generateRandomLocation();
+        createAgent(new DeliveryOptimizerAgent("DeliveryOptimizer", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 4));
+        pos = this.generateRandomLocation();
+        createAgent(new SmarterReplanningAgent("SmarterReplanning", pos.getX(), pos.getY(), this, Parameters.defaultFuelLevel, 5));
+    }
+
+    protected void createAgent(TWAgent a) {
     	schedule.scheduleRepeating(new Steppable(){public void step(SimState state) {a.sense(); a.communicate();}}, 2, 1.0);
         schedule.scheduleRepeating(a, 3, 1.0);
         if(TWGUI.instance !=null){
