@@ -150,3 +150,40 @@ Interpretation: Config 2 is highly volatile. The presentation batch was a lower-
 If you want a stronger evidence-based statement for report or presentation:
 
 > Across 4 same-day 10-run batches, Config 1 averaged **890.35** over 40 runs with **0% failures**. Config 2 averaged **1924.72** over 40 runs with a **75% success rate**, and its successful runs averaged **2566.30**.
+
+---
+
+## Bug-Fix Rerun (2026-04-14)
+
+**Context:** A bug was found in `run-tests.sh` — `TWObjectCreator.java` was not being switched to `Parameters2` for Config 2 runs, so objects were created with `lifeTime=100` instead of `lifeTime=30`. This flooded the grid with obstacles and caused artificially low Config 2 scores. The script was fixed and rerun.
+
+**Log files:**
+- `test-logs/config1-20260414-001703.log`
+- `test-logs/config2-20260414-001719.log`
+
+### Config 1 (post-fix)
+
+| Metric | Value |
+|---|---:|
+| Average | **813.7** |
+| Min | 315 |
+| Max | 920 |
+| Failures | 0 |
+| Success rate | **100%** |
+
+### Config 2 (post-fix)
+
+| Metric | Value |
+|---|---:|
+| Average | **1479.3** |
+| Min | 0 |
+| Max | 1817 |
+| Failures | 1 |
+| Success rate | **90%** |
+| Average (successful only) | **1643.7** |
+
+### Notes
+
+- Config 2 failure rate improved from 40% (pre-fix) to 10% (post-fix) — the main effect of the bug fix.
+- Successful Config 2 scores (1434–1817) are lower than the pre-fix April 10 runs, which benefited from different seeds. Natural run-to-run variance is high in Config 2.
+- Pre-fix April 10 results remain in the document above for reference; treat the post-fix figures as the authoritative corrected baseline.

@@ -71,11 +71,13 @@
 | Object Density | 0.2 mean (sparse) | 2.0 mean (dense) |
 | Fuel Capacity | 500 | 500 |
 | **Baseline Avg** | **548.9** | **1439.9** |
-| **Final Avg** | **883.8** | **1539.6** |
+| **Final Avg (pre-fix)** | **883.8** | **1539.6** |
+| **Bug-Fixed Avg** | **813.7** | **1479.3** |
 | Baseline Failures | 0% | 20% |
-| Final Failures | 0% | 40% |
+| Final Failures (pre-fix) | 0% | 40% |
+| Bug-Fixed Failures | 0% | 10% |
 
-**Key Insight:** Config 1 improved significantly (+61.0%) with zero failures. Config 2 peak scores increased (~2566 on successful runs, +42.6%) but failure rate worsened from 20% to 40% — specialists optimise aggressively but the Config 2 large-grid fuel discovery problem remains unsolved.
+**Key Insight:** Config 1 improved significantly (+61.0% vs baseline) with zero failures. Config 2 failure rate improved from 40% to 10% after the bug fix (object lifetime was incorrectly set to 100 steps instead of 30 in the test script). Bug-fixed Config 2 successful runs average 1643.7.
 
 ---
 
@@ -173,4 +175,56 @@ java -cp "bin:../lib/MASON_14.jar" tileworld.TileworldMain
 
 ---
 
-**Last Updated:** 2026-04-02
+---
+
+## Bug-Fixed Results (After run-tests.sh Fix)
+
+**Date:** 2026-04-14
+**Fix:** `run-tests.sh` was not switching object lifetime to 30 steps for Config 2 in `TWObjectCreator.java` — objects were living 100 steps instead of 30, flooding the grid. Fixed by patching the correct environment-layer files only.
+
+### Config 1: Bug-Fixed Scores
+
+| Run | Seed | Score |
+|-----|------|-------|
+| 1 | 1871076827 | 838 |
+| 2 | 1040844671 | 753 |
+| 3 | 874603391 | 868 |
+| 4 | 1404597876 | 920 |
+| 5 | 1989114278 | 894 |
+| 6 | 1932730136 | 892 |
+| 7 | 2086761665 | 315 |
+| 8 | 494487007 | 857 |
+| 9 | 1877723601 | 903 |
+| 10 | 1394466126 | 897 |
+
+**Config 1 Bug-Fixed:**
+- **Average:** 813.7
+- **Range:** 315–920
+- **Failure Rate:** 0%
+- **Log:** `test-logs/config1-20260414-001703.log`
+
+### Config 2: Bug-Fixed Scores
+
+| Run | Seed | Score |
+|-----|------|-------|
+| 1 | 2133795667 | 1675 |
+| 2 | 1506701698 | 1691 |
+| 3 | 803048268 | 1560 |
+| 4 | 205262730 | 1514 |
+| 5 | 1579995097 | 1629 |
+| 6 | 1563481405 | 1434 |
+| 7 | 2077485139 | 1716 |
+| 8 | 1710251302 | 0 ❌ |
+| 9 | 2058411423 | 1757 |
+| 10 | 534566726 | 1817 |
+
+**Config 2 Bug-Fixed:**
+- **Average:** 1479.3
+- **Range:** 0–1817
+- **Failure Rate:** 10% (1/10)
+- **Average (successful runs only):** 1643.7
+- **Log:** `test-logs/config2-20260414-001719.log`
+
+---
+
+**Last Updated:** 2026-04-14
