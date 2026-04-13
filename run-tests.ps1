@@ -3,10 +3,11 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 
-$envFile  = "Tileworld\src\tileworld\environment\TWEnvironment.java"
-$mainFile = "Tileworld\src\tileworld\TileworldMain.java"
-$envBak   = "$envFile.bak"
-$mainBak  = "$mainFile.bak"
+$patchFiles = @(
+    "Tileworld\src\tileworld\environment\TWEnvironment.java",
+    "Tileworld\src\tileworld\environment\TWObjectCreator.java",
+    "Tileworld\src\tileworld\TileworldMain.java"
+)
 
 $javacPath = (Get-Command javac).Source
 $jdkBin    = Split-Path $javacPath -Parent
@@ -28,25 +29,21 @@ function Write-TextUtf8NoBom([string]$path, [string]$content) {
 }
 
 function Set-Config1 {
-    $envText = Read-TextRaw $envFile
-    $envText = $envText -replace "import\s+tileworld\.Parameters2;", "import tileworld.Parameters;"
-    $envText = $envText -replace "\bParameters2\.", "Parameters."
-    Write-TextUtf8NoBom $envFile $envText
-
-    $mainText = Read-TextRaw $mainFile
-    $mainText = $mainText -replace "\bParameters2\.", "Parameters."
-    Write-TextUtf8NoBom $mainFile $mainText
+    foreach ($f in $patchFiles) {
+        $text = Read-TextRaw $f
+        $text = $text -replace "import\s+tileworld\.Parameters2;", "import tileworld.Parameters;"
+        $text = $text -replace "\bParameters2\.", "Parameters."
+        Write-TextUtf8NoBom $f $text
+    }
 }
 
 function Set-Config2 {
-    $envText = Read-TextRaw $envFile
-    $envText = $envText -replace "import\s+tileworld\.Parameters;", "import tileworld.Parameters2;"
-    $envText = $envText -replace "\bParameters\.", "Parameters2."
-    Write-TextUtf8NoBom $envFile $envText
-
-    $mainText = Read-TextRaw $mainFile
-    $mainText = $mainText -replace "\bParameters\.", "Parameters2."
-    Write-TextUtf8NoBom $mainFile $mainText
+    foreach ($f in $patchFiles) {
+        $text = Read-TextRaw $f
+        $text = $text -replace "import\s+tileworld\.Parameters;", "import tileworld.Parameters2;"
+        $text = $text -replace "\bParameters\.", "Parameters2."
+        Write-TextUtf8NoBom $f $text
+    }
 }
 
 function Build-And-Run([string]$label) {
@@ -68,8 +65,7 @@ function Build-And-Run([string]$label) {
 }
 
 try {
-    Copy-Item $envFile  $envBak  -Force
-    Copy-Item $mainFile $mainBak -Force
+    foreach ($f in $patchFiles) { Copy-Item $f "$f.bak" -Force }
 
     Set-Config1
     Build-And-Run "config1"
@@ -78,6 +74,7 @@ try {
     Build-And-Run "config2"
 }
 finally {
-    if (Test-Path $envBak)  { Move-Item $envBak  $envFile  -Force }
-    if (Test-Path $mainBak) { Move-Item $mainBak $mainFile -Force }
+    foreach ($f in $patchFiles) {
+        if (Test-Path "$f.bak") { Move-Item "$f.bak" $f -Force }
+    }
 }
