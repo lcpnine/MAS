@@ -22,32 +22,29 @@ esac
 LOG_DIR="$ROOT_DIR/test-logs"
 mkdir -p "$LOG_DIR"
 
-# Only environment-layer files are switched between Parameters and Parameters2.
-# Agent/planner files intentionally keep Parameters.lifeTime=100 as their
-# planning horizon — changing them narrows maxDist to 18 on the 80x80 grid.
-PATCH_FILES=(
-  "Tileworld/src/tileworld/environment/TWEnvironment.java"
-  "Tileworld/src/tileworld/environment/TWObjectCreator.java"
-  "Tileworld/src/tileworld/TileworldMain.java"
-)
+PARAMS="Tileworld/src/tileworld/Parameters.java"
 
-restore_files() {
-  for f in "${PATCH_FILES[@]}"; do
-    [[ -f "${f}.bak" ]] && mv -f "${f}.bak" "$f"
-  done
+restore_params() {
+  [[ -f "${PARAMS}.bak" ]] && mv -f "${PARAMS}.bak" "$PARAMS"
 }
-trap restore_files EXIT
+trap restore_params EXIT
 
 set_config1() {
-  for f in "${PATCH_FILES[@]}"; do
-    perl -0777 -i -pe 's/import\s+tileworld\.Parameters2;/import tileworld.Parameters;/g; s/\bParameters2\./Parameters./g' "$f"
-  done
+  [[ -f "${PARAMS}.bak" ]] && cp -f "${PARAMS}.bak" "$PARAMS"
 }
 
 set_config2() {
-  for f in "${PATCH_FILES[@]}"; do
-    perl -0777 -i -pe 's/import\s+tileworld\.Parameters;/import tileworld.Parameters2;/g; s/\bParameters\./Parameters2./g' "$f"
-  done
+  perl -0777 -i -pe '
+    s/(xDimension\s*=\s*)\d+/${1}80/g;
+    s/(yDimension\s*=\s*)\d+/${1}80/g;
+    s/(tileMean\s*=\s*)[\d.]+/${1}2.0/g;
+    s/(holeMean\s*=\s*)[\d.]+/${1}2.0/g;
+    s/(obstacleMean\s*=\s*)[\d.]+/${1}2.0/g;
+    s/(tileDev\s*=\s*)[\d.f]+/${1}0.5/g;
+    s/(holeDev\s*=\s*)[\d.f]+/${1}0.5/g;
+    s/(obstacleDev\s*=\s*)[\d.f]+/${1}0.5/g;
+    s/(lifeTime\s*=\s*)\d+/${1}30/g;
+  ' "$PARAMS"
 }
 
 build_and_run() {
@@ -64,9 +61,7 @@ build_and_run() {
   echo "Log: $log_file"
 }
 
-for f in "${PATCH_FILES[@]}"; do
-  cp -f "$f" "${f}.bak"
-done
+cp -f "$PARAMS" "${PARAMS}.bak"
 
 set_config1
 build_and_run "config1"

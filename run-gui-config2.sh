@@ -17,27 +17,29 @@ case "$(uname -s)" in
   *) CP_SEP=':' ;;
 esac
 
-# Only environment-layer files are switched to Parameters2.
-# Agent/planner files keep Parameters.lifeTime=100 as their planning horizon.
-ENV_FILE="Tileworld/src/tileworld/environment/TWEnvironment.java"
-OBJCREATOR_FILE="Tileworld/src/tileworld/environment/TWObjectCreator.java"
-ENV_BAK="${ENV_FILE}.bak"
-OBJCREATOR_BAK="${OBJCREATOR_FILE}.bak"
+PARAMS="Tileworld/src/tileworld/Parameters.java"
 
-restore_files() {
-  if [[ -f "$ENV_BAK" ]]; then mv -f "$ENV_BAK" "$ENV_FILE"; fi
-  if [[ -f "$OBJCREATOR_BAK" ]]; then mv -f "$OBJCREATOR_BAK" "$OBJCREATOR_FILE"; fi
-  echo "Restored environment files to Config 1"
+restore_params() {
+  [[ -f "${PARAMS}.bak" ]] && mv -f "${PARAMS}.bak" "$PARAMS"
+  echo "Restored Parameters.java to Config 1"
 }
-trap restore_files EXIT
+trap restore_params EXIT
 
-cp -f "$ENV_FILE" "$ENV_BAK"
-cp -f "$OBJCREATOR_FILE" "$OBJCREATOR_BAK"
+cp -f "$PARAMS" "${PARAMS}.bak"
 
 echo "=== Config 2: 80x80 dense (lifetime 30) ==="
 
-perl -0777 -i -pe 's/import\s+tileworld\.Parameters;/import tileworld.Parameters2;/g; s/\bParameters\./Parameters2./g' "$ENV_FILE"
-perl -0777 -i -pe 's/import\s+tileworld\.Parameters;/import tileworld.Parameters2;/g; s/\bParameters\./Parameters2./g' "$OBJCREATOR_FILE"
+perl -0777 -i -pe '
+  s/(xDimension\s*=\s*)\d+/${1}80/g;
+  s/(yDimension\s*=\s*)\d+/${1}80/g;
+  s/(tileMean\s*=\s*)[\d.]+/${1}2.0/g;
+  s/(holeMean\s*=\s*)[\d.]+/${1}2.0/g;
+  s/(obstacleMean\s*=\s*)[\d.]+/${1}2.0/g;
+  s/(tileDev\s*=\s*)[\d.f]+/${1}0.5/g;
+  s/(holeDev\s*=\s*)[\d.f]+/${1}0.5/g;
+  s/(obstacleDev\s*=\s*)[\d.f]+/${1}0.5/g;
+  s/(lifeTime\s*=\s*)\d+/${1}30/g;
+' "$PARAMS"
 
 mkdir -p Tileworld/bin
 find Tileworld/src -name "*.java" | xargs "$JAVAC" -cp "lib/MASON_14.jar" -d Tileworld/bin
