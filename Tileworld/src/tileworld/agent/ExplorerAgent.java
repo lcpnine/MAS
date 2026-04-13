@@ -8,7 +8,8 @@ import tileworld.environment.TWEnvironment;
 /**                                                                                                                                         
  * ExplorerAgent — Systematic zone coverage - nik
  *
- * Specialization: Zone-based exploration (6 strips), hotspot bias, SWAP broadcasts when zone done
+ * Specialization: Zone-based exploration (6 strips), hotspot bias, SWAP broadcasts when zone done.
+ * Enhancement: Adaptive hotspot thresholds, delivery when carrying 3 tiles.
  */
 public class ExplorerAgent extends SmartTWAgent {
 
@@ -31,12 +32,19 @@ public class ExplorerAgent extends SmartTWAgent {
             return fuelSafety;
         }
 
-        // Priority 0 - get to the densest hotspot only if its whithin zone and distant
+        TWThought opp = opportunisticAction();
+        if (opp != null) {
+            return opp;
+        }
+
+        // Priority 0 - get to the densest hotspot only if within zone and distant
         if(!hotspots.isEmpty()){
             HotspotEntry best = getBestHotspotEntry();
             if(best !=null && isInMyZone(best.position.x, best.position.y)){
                 int dist = Math.abs(getX()-best.position.x)+Math.abs(getY()-best.position.y);
-                if(dist>15){
+                // Adaptive threshold: 8 for small grids, 15 for large
+                int hotspotThreshold = getSmartMemory().isLargeGrid() ? 15 : 8;
+                if(dist > hotspotThreshold){
                     TWDirection dir = navigateTo(best.position.x,best.position.y, "explore_hotspot");
                     if(dir != null){
                         return new TWThought(TWAction.MOVE, dir);

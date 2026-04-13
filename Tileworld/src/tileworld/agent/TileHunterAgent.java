@@ -1,6 +1,7 @@
 package tileworld.agent;
 
 import sim.util.Int2D;
+import tileworld.Parameters;
 import tileworld.environment.TWDirection;
 import tileworld.environment.TWEnvironment;
 
@@ -11,7 +12,7 @@ import tileworld.environment.TWEnvironment;
  * reached, then delivers. This batching strategy reduces the number of
  * tile→hole trips, making each fuel unit more productive.
  *
- * Improvements over base SmartTWAgent:
+ * Key behaviours:
  *  1. Adaptive tile target   — batch 3 in stable envs, deliver immediately in
  *                              volatile envs (short lifetime / Config 2)
  *  2. Aggressive claiming    — claims the target tile immediately to reduce
@@ -20,9 +21,7 @@ import tileworld.environment.TWEnvironment;
  *                              EXPIRING broadcasts (parsed by base class)
  *  4. Hotspot-biased explore — when no tile is known, moves toward the nearest
  *                              HOTSPOT broadcast rather than random sweeping
- *
- * Everything else (fuel emergency, opportunistic pickup/drop, A* nav,
- * message parsing, zone sweeping) is inherited from SmartTWAgent.
+ *  5. Reachability check     — skips tiles that will likely expire before arrival
  */
 public class TileHunterAgent extends SmartTWAgent {
 
@@ -38,26 +37,29 @@ public class TileHunterAgent extends SmartTWAgent {
             return fuelSafety;
         }
 
+        // Free pickup/drop at current cell — critical when specialist logic
+        // would otherwise return MOVE and skip the base class's priority 3-4.
+        TWThought opp = opportunisticAction();
+        if (opp != null) {
+            return opp;
+        }
+
         int carried = getCarriedTileCount();
 
         // ADAPTIVE TILE TARGET
-        // Short-lifetime envs (Config 2): objects expire in ~30 steps, so batching
-        // risks the hole disappearing before we arrive. Deliver at 1.
+        // Short-lifetime envs (Config 2): objects expire in ~30 steps, deliver at 1.
         // Long-lifetime envs (Config 1): batch 3 tiles for fuel efficiency.
         int tileTarget = getSmartMemory().isShortLifetime() ? 1 : 3;
 
         // ── PRIORITY 0: TILE HUNTING ──────────────────────────────────────────
-        // While below capacity, bypass the base agent's deliver/seek balance and
-        // commit fully to collecting tiles.
         if (carried < tileTarget) {
             Int2D tile = getSmartMemory().getClosestTilePosition();
 
-            // Skip if claimed by a teammate or flagged as expiring
             if (tile != null
                     && !getSmartMemory().isClaimed(tile.x, tile.y)
-                    && !isExpiring(tile)) {
+                    && !isExpiring(tile)
+                    && isReachableBeforeExpiry(tile)) {
 
-                // Claim immediately so teammates skip this tile
                 getSmartMemory().addClaim(
                         tile.x, tile.y,
                         getEnvironment().schedule.getTime());
@@ -68,8 +70,7 @@ public class TileHunterAgent extends SmartTWAgent {
                 }
             }
 
-            // No viable tile in memory — explore toward nearest hotspot if known,
-            // otherwise fall back to the base lawnmower sweep.
+            // No viable tile — explore toward nearest hotspot or sweep
             TWDirection dir = exploreTowardHotspot();
             if (dir != null) {
                 return new TWThought(TWAction.MOVE, dir);
@@ -81,15 +82,14 @@ public class TileHunterAgent extends SmartTWAgent {
         }
 
         // ── PRIORITY 1: DELIVERY ─────────────────────────────────────────────
-        // Reached target — find the nearest unclaimed, non-expiring hole.
         if (carried >= tileTarget) {
             Int2D hole = getSmartMemory().getClosestHolePosition();
 
             if (hole != null
                     && !getSmartMemory().isClaimed(hole.x, hole.y)
-                    && !isExpiring(hole)) {
+                    && !isExpiring(hole)
+                    && isReachableBeforeExpiry(hole)) {
 
-                // Claim the hole immediately so teammates skip it (mirrors tile claiming)
                 getSmartMemory().addClaim(
                         hole.x, hole.y,
                         getEnvironment().schedule.getTime());
@@ -99,30 +99,30 @@ public class TileHunterAgent extends SmartTWAgent {
                     return new TWThought(TWAction.MOVE, dir);
                 }
             }
-            // No viable hole found — fall through to base agent which will
-            // explore until a hole appears in memory.
         }
 
         // ── PRIORITY 2: BASE FALLTHROUGH ─────────────────────────────────────
-        // SmartTWAgent handles: fuel emergency, refuel, opportunistic pickup/drop,
-        // opportunistic refuel near station, standard planner, explore, wait.
         return super.think();
     }
 
     @Override
     public void communicate() {
-        // Base class broadcasts: FUEL, TILE, HOLE, GONE, CLAIM.
-        // TileHunterAgent has no additional messages to send —
-        // aggressive claiming via addClaim() already reduces team-wide conflict.
         super.communicate();
     }
 
     // ── HELPERS ──────────────────────────────────────────────────────────────
 
-    /**
-     * Returns true if this position was flagged as expiring by a teammate.
-     * Uses manual x/y comparison — MASON's Int2D.equals() is unreliable.
-     */
+    private boolean isReachableBeforeExpiry(Int2D target) {
+        double now = getEnvironment().schedule.getTime();
+        double obsTime = getSmartMemory().getObservationTime(target.x, target.y);
+        if (obsTime < 0) return true;
+        double age = now - obsTime;
+        double remaining = Parameters.lifeTime - age;
+        int stepsToArrival = Math.abs(getX() - target.x) + Math.abs(getY() - target.y);
+        double threshold = getSmartMemory().isShortLifetime() ? 0.7 : 0.85;
+        return stepsToArrival <= remaining * threshold;
+    }
+
     private boolean isExpiring(Int2D pos) {
         for (Int2D exp : expiringTargets) {
             if (exp.x == pos.x && exp.y == pos.y) return true;
@@ -130,11 +130,6 @@ public class TileHunterAgent extends SmartTWAgent {
         return false;
     }
 
-    /**
-     * When no tile is in memory, navigate toward the nearest known hotspot.
-     * Hotspots are tile-dense regions broadcast by DeliveryOptimizerAgent.
-     * Returns null if no hotspots are known, so caller falls back to exploreGreedy().
-     */
     private TWDirection exploreTowardHotspot() {
         if (hotspots.isEmpty()) return null;
 

@@ -12,6 +12,10 @@ import tileworld.Parameters;
  * 1. Did someone else say this target is expiring? Agent avoids it.
  * 2. Will it expire before agent arrives? Agent broadcasts and switches.
  * 3. Will agent run out of fuel doing the round trip? Agent goes to refuel.
+ *
+ * Enhancements:
+ * - Tighter expiry thresholds (0.65/0.85 vs 0.7/0.9)
+ * - Slightly tighter fuel safety margin
  */
 public class SmarterReplanningAgent extends SmartTWAgent {
 
@@ -26,6 +30,11 @@ public class SmarterReplanningAgent extends SmartTWAgent {
         TWThought fuelSafety = fuelSafetyOverride();
         if (fuelSafety != null) {
             return fuelSafety;
+        }
+
+        TWThought opp = opportunisticAction();
+        if (opp != null) {
+            return opp;
         }
 
         if (!getPlanner().hasPlan()) {
@@ -56,7 +65,7 @@ public class SmarterReplanningAgent extends SmartTWAgent {
             return super.think();
         }
 
-        // 2. Will target expire before agent arrives?
+        // 2. Will target expire before agent arrives? (tighter thresholds)
         double currentTime = getEnvironment().schedule.getTime();
         double obsTime = getSmartMemory().getObservationTime(currentGoal.x, currentGoal.y);
         if (obsTime >= 0) {
@@ -65,7 +74,7 @@ public class SmarterReplanningAgent extends SmartTWAgent {
             int stepsToArrival = Math.abs(getX() - currentGoal.x) + Math.abs(getY() - currentGoal.y);
 
             // Tighter threshold for short-lived objects
-            double expiryThreshold = getSmartMemory().isShortLifetime() ? 0.7 : 0.9;
+            double expiryThreshold = getSmartMemory().isShortLifetime() ? 0.65 : 0.85;
             if (stepsToArrival > remainingLifetime * expiryThreshold) {
                 // Broadcast once so teammates avoid it too
                 if (lastBroadcastExpiring == null
@@ -87,7 +96,8 @@ public class SmarterReplanningAgent extends SmartTWAgent {
         if (fuelPos != null) {
             int stepsToGoal = Math.abs(getX() - currentGoal.x) + Math.abs(getY() - currentGoal.y);
             int stepsToFuel = Math.abs(currentGoal.x - fuelPos.x) + Math.abs(currentGoal.y - fuelPos.y);
-            int safetyMargin = Math.max(50, getSmartMemory().getXDim() / 4);
+            // Slightly tighter margin than original max(50, xDim/4)
+            int safetyMargin = Math.max(40, getSmartMemory().getXDim() / 4);
             int totalCost = stepsToGoal + stepsToFuel + safetyMargin;
 
             if (getFuelLevel() < totalCost) {
