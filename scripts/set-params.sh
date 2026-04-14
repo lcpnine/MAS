@@ -33,3 +33,18 @@ set_config2() {
     s/(lifeTime\s*=\s*)\d+/${1}30/g;
   ' "$PARAMS"
 }
+
+
+set_config3() {
+  perl -0777 -i -pe '
+    s/(xDimension\s*=\s*)\d+/${1}120/g;
+    s/(yDimension\s*=\s*)\d+/${1}120/g;
+    s/(tileMean\s*=\s*)[\d.]+/${1}5.0/g;
+    s/(holeMean\s*=\s*)[\d.]+/${1}5.0/g;
+    s/(obstacleMean\s*=\s*)[\d.]+/${1}5.0/g;
+    s/(tileDev\s*=\s*)[\d.f]+/${1}0.5/g;
+    s/(holeDev\s*=\s*)[\d.f]+/${1}0.5/g;
+    s/(obstacleDev\s*=\s*)[\d.f]+/${1}0.5/g;
+    s/(lifeTime\s*=\s*)\d+/${1}50/g;
+  ' "$PARAMS"
+}
