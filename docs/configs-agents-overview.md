@@ -547,6 +547,17 @@ One of the best signs of maturity in the code is that good ideas were reused acr
 
 That means the project improved not just by adding more logic, but by combining the best ideas into better integrated behavior.
 
+## Config 1 Phase Score History
+
+The phase scores below are the historical progression for the Config 1 runs. The current Phase 4 validation runs are recorded separately in [`MULTI_RUN_RESULTS.md`](/Users/lcpnine/mas/MULTI_RUN_RESULTS.md).
+
+| Phase | Avg Reward | Min | Max | Description |
+|-------|-----------:|----:|----:|-------------|
+| **Phase 1** | 32.1 | 0 | 55 | Exploration + opportunistic pickup only |
+| **Phase 2** | 160.3 | 0 | 249 | + A* planning and delivery |
+| **Phase 3** | 541.5 | 469 | 601 | + Zone coordination and communication |
+| **Phase 4** | 864.3 | 801 | 959 | Latest Config 1 rerun |
+
 ## How the Team Improved the Result
 
 The project improved through stages.
