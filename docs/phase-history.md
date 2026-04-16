@@ -4,7 +4,7 @@ This document summarizes how the project evolved across Phases 1 to 4.
 
 The score progression below is for **Config 1**. Current validation reruns are tracked separately in [`MULTI_RUN_RESULTS.md`](/Users/lcpnine/mas/MULTI_RUN_RESULTS.md).
 
-The commit shown in the table is the primary anchor commit for each phase. Each phase also includes related follow-up commits listed in the sections below.
+The primary anchor commit for each phase is noted in the section below. Each phase also includes related follow-up commits listed in those sections.
 
 | Phase | Avg Reward | Min | Max |
 |---|---:|---:|---:|
@@ -45,11 +45,11 @@ This is the phase where the score jump became structural rather than incremental
 
 ## Phase 4
 
-**Primary anchor:** `72a943`
+**Primary anchor:** `d9cef11`
 
 **Related commits:** `348fb1`, `72a943`, `5a58db`, `091d70`, `7b78fd`, `cd81f80`, `d9cef11`, `f571aae`, `8e208cd`, `3b64708`, `e3a4a01`, `efe94e`
 
-Phase 4 made two distinct contributions. The first was architectural: the system moved from a single shared `SmartTWAgent` to a team of role-specific agents — `TileHunterAgent`, `HoleFillerAgent`, `FuelScoutAgent`, `DeliveryOptimizerAgent`, and `ExplorerAgent`. Each agent owns a narrow responsibility and executes it without needing to reason about the full task space, which eliminated the conditional branching that had accumulated inside `SmartTWAgent`.
+Phase 4 made two distinct contributions. The first was architectural: the system moved from a single shared `SmartTWAgent` to a team of role-specific agents — `TileHunterAgent`, `HoleFillerAgent`, `FuelScoutAgent`, `DeliveryOptimizerAgent`, `ExplorerAgent`, and `SmarterReplanningAgent`. Each agent owns a narrow responsibility and executes it without needing to reason about the full task space, which eliminated the conditional branching that had accumulated inside `SmartTWAgent`.
 
 The second contribution was refinement of that new architecture: runtime environment detection, adaptive fuel safety margins, tighter target freshness handling, smarter replanning, and tuned behavior for dense or short-lifetime maps. These changes strengthened each specialised agent individually and made the team more robust across different map conditions.
 
