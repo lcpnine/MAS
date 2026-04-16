@@ -2,7 +2,7 @@
 
 This document summarizes how the project evolved across Phases 1 to 4.
 
-The score progression below is for **Config 1**. Current validation reruns are tracked separately in [`MULTI_RUN_RESULTS.md`](/Users/lcpnine/mas/MULTI_RUN_RESULTS.md).
+The score progression below is for **Config 1**. Phases 1–3 scores are frozen historical results from earlier codebase states. The Phase 4 score is the current validation rerun on the active codebase; full rerun details are in [`MULTI_RUN_RESULTS.md`](/Users/lcpnine/mas/MULTI_RUN_RESULTS.md).
 
 The primary anchor commit for each phase is noted in the section below. Each phase also includes related follow-up commits listed in those sections.
 
@@ -11,7 +11,7 @@ The primary anchor commit for each phase is noted in the section below. Each pha
 | **Phase 1** | 32.1 | 0 | 55 |
 | **Phase 2** | 160.3 | 0 | 249 |
 | **Phase 3** | 541.5 | 469 | 601 |
-| **Phase 4** | 864.3 | 801 | 959 |
+| **Phase 4** | 864.3 | 801 | 959 (current rerun) |
 
 ## Phase 1
 
@@ -47,11 +47,15 @@ This is the phase where the score jump became structural rather than incremental
 
 **Primary anchor:** `d9cef11`
 
-**Related commits:** `348fb1`, `72a943`, `5a58db`, `091d70`, `7b78fd`, `cd81f80`, `d9cef11`, `f571aae`, `8e208cd`, `3b64708`, `e3a4a01`, `efe94e`
+**Related commits:** `348fb1`, `72a943`, `5a58db`, `091d70`, `cd81f80`, `d9cef11`, `da869a4`, `f571aae`, `8e208cd`, `3b64708`, `e3a4a01`, `7b78fd`, `efe94e`
 
-Phase 4 made two distinct contributions. The first was architectural: the system moved from a single shared `SmartTWAgent` to a team of role-specific agents — `TileHunterAgent`, `HoleFillerAgent`, `FuelScoutAgent`, `DeliveryOptimizerAgent`, `ExplorerAgent`, and `SmarterReplanningAgent`. Each agent owns a narrow responsibility and executes it without needing to reason about the full task space, which eliminated the conditional branching that had accumulated inside `SmartTWAgent`.
+Phase 4 unfolded in three steps.
 
-The second contribution was refinement of that new architecture: runtime environment detection, adaptive fuel safety margins, tighter target freshness handling, smarter replanning, and tuned behavior for dense or short-lifetime maps. These changes strengthened each specialised agent individually and made the team more robust across different map conditions.
+The first was adaptive improvements to `SmartTWAgent` and `SmartTWAgentMemory` directly (`348fb1`, `72a943`, `5a58db`, `091d70`): runtime environment detection, adaptive fuel safety margins, and smarter planning heuristics.
+
+The second was a two-stage architectural transition. `cd81f80` broke the uniform agent loop — previously six identical `SmartTWAgent` instances — into individually instantiated per-slot subclasses (person-named: `AdityaAgent`, `YutaekAgent`, etc.), each a thin wrapper with no overridden behavior. `d9cef11` then replaced those with role-named subclasses — `TileHunterAgent`, `HoleFillerAgent`, `FuelScoutAgent`, `DeliveryOptimizerAgent`, `ExplorerAgent`, and `SmarterReplanningAgent` — still mostly delegating to `super` at that point.
+
+The third step was where the actual role-specific behavior landed (`da869a4`, `f571aae`, `8e208cd`, `3b64708`, `e3a4a01`, `7b78fd`, `efe94e`): tighter expiry thresholds, freshness-aware delivery clustering, reachability checks on tile targets, adaptive hotspot distances, and throttled broadcasts. `SmartTWAgent` remained the shared execution base throughout; each subclass layered its specialisation on top.
 
 ## Summary
 
@@ -60,6 +64,6 @@ The development pattern across the four phases is clear:
 1. `Phase 1` built survival and memory.
 2. `Phase 2` added planning.
 3. `Phase 3` added coordination.
-4. `Phase 4` introduced specialised agents, then refined them with adaptive and robustness improvements.
+4. `Phase 4` first improved `SmartTWAgent` adaptively, then split the team into per-slot subclasses (`cd81f80`), then renamed those to role-named classes (`d9cef11`), then added the actual per-role behavior in follow-up commits.
 
-That progression matches the score trajectory. The largest structural jump came in Phase 3, while Phase 4 introduced a second architectural shift — role-specific agents — and then made that new architecture more reliable and context-aware.
+That progression matches the score trajectory. The largest structural jump came in Phase 3, while Phase 4 combined adaptive base improvements with a two-stage architectural transition to role-specific subclasses, with substantive specialisation landing in the follow-up commits rather than at the architectural switch itself.
