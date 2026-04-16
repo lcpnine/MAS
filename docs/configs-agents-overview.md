@@ -549,7 +549,9 @@ That means the project improved not just by adding more logic, but by combining 
 
 ## Config 1 Phase Score History
 
-The phase scores below are the historical progression for the Config 1 runs. The current Phase 4 validation runs are recorded separately in [`MULTI_RUN_RESULTS.md`](/Users/lcpnine/mas/MULTI_RUN_RESULTS.md).
+The phase scores below are the historical progression for Config 1 only. This document does not track the current validation reruns; those live in [`MULTI_RUN_RESULTS.md`](/Users/lcpnine/mas/MULTI_RUN_RESULTS.md).
+
+A phase-by-phase explanation of how the system evolved is recorded in [`phase-history.md`](/Users/lcpnine/mas/docs/phase-history.md).
 
 | Phase | Avg Reward | Min | Max | Description |
 |-------|-----------:|----:|----:|-------------|

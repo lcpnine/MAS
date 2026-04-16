@@ -9,7 +9,9 @@
 
 ## Config 1 Phase Score History
 
-These are the historical Phase 1-4 scores recorded for the Config 1 runs in the project documentation.
+These are the historical Phase 1-4 scores recorded for Config 1 only. They are kept here for comparison with the current validation runs below.
+
+A phase-by-phase narrative summary is recorded in [`docs/phase-history.md`](/Users/lcpnine/mas/docs/phase-history.md).
 
 | Phase | Avg Reward | Min | Max | Description |
 |---|---:|---:|---:|---|
@@ -22,7 +24,7 @@ These are the historical Phase 1-4 scores recorded for the Config 1 runs in the 
 
 ## Phase 4 Validation Runs
 
-These are the current Phase 4 reruns on the active codebase. They are separate from the historical Config 1 phase scores above.
+These are the current Phase 4 reruns on the active codebase. They are separate from the historical Config 1 phase scores above and include both Config 1 and Config 2.
 
 ### Config 1
 
