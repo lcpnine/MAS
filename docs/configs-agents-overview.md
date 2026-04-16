@@ -526,12 +526,12 @@ This turns six local agents into one coordinated system.
 
 ### 3. Measured improvement in results
 
-The broader same-day rerun evidence shows that the architecture improved performance substantially.
+Phase 4 validation reruns on the active codebase show that the architecture improved performance substantially. Full results are in [`MULTI_RUN_RESULTS.md`](/Users/lcpnine/mas/MULTI_RUN_RESULTS.md).
 
-| Config | Evidence |
-|---|---|
-| **Config 1** | Averaged **890.35** over 40 runs with **0% failures** |
-| **Config 2** | Averaged **1924.72** over 40 runs with **75% success rate** |
+| Config | Avg Reward | Final Reward | Failures |
+|---|---:|---:|---:|
+| **Config 1** | **864.3** | **959** | 0 |
+| **Config 2** | **888.6** | **981** | 0 |
 
 Config 1 is the clearest success case: the system is both strong and reliable there.
 

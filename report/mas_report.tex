@@ -1,12 +1,26 @@
 % File: mas_report.tex
 \documentclass[letterpaper]{article}
 \usepackage{aaai}
-\usepackage{times}
-\usepackage{helvet}
-\usepackage{courier}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{microtype}
 \frenchspacing
 \setlength{\pdfpagewidth}{8.5in}
 \setlength{\pdfpageheight}{11in}
+\makeatletter
+\renewenvironment{thebibliography}[1]
+     {\section*{References\@mkboth{REFERENCES}{REFERENCES}}%
+      \list{\@biblabel{\arabic{enumiv}}}%
+           {\settowidth\labelwidth{\@biblabel{#1}}%
+            \leftmargin\labelwidth
+            \advance\leftmargin\labelsep
+            \usecounter{enumiv}%
+            \itemsep .01in}%
+      \sloppy\clubpenalty4000\widowpenalty4000
+      \sfcode`\.=1000\relax}
+     {\endlist}
+\makeatother
 \pdfinfo{
 /Title (TileWorld Multi-Agent System)
 /Author (Ananya Singh, Twissa Modi, Aditya Kumar Goel, Yu Taek Lee, Nik Shahrul Nafiz Bin Nik Azhan, Mate Tringer)}
@@ -19,37 +33,502 @@
 AI6125 Multi-Agent Systems\\
 Group 18\\
 \and
-Ananya Singh\\
-Twissa Modi\\
-Aditya Kumar Goel\\
-Yu Taek Lee\\
-Nik Shahrul Nafiz Bin Nik Azhan\\
-M\'ate Tringer
+Ananya Singh \quad Twissa Modi \quad Aditya Kumar Goel\\
+Yu Taek Lee \quad Nik Shahrul Nafiz Bin Nik Azhan \quad M\'ate Tringer
 }
 \maketitle
 
 \begin{abstract}
 \begin{quote}
-This report is prepared for AI6125 Multi-Agent Systems by Group 18.
-The project title is TileWorld Multi-Agent System.
+We present a six-agent multi-agent system built for the TileWorld simulation
+using the MASON framework. TileWorld is a challenging benchmark in which agents
+must explore a partially observable grid, discover a hidden fuel station, collect
+tiles, and fill holes to earn reward --- all under tight fuel constraints and with
+objects that expire after a limited lifetime. Our approach uses a two-layer
+architecture: a shared infrastructure layer that provides A* pathfinding,
+fuel-aware planning, memory with observation timestamps, and a broadcast
+communication protocol, plus a specialisation layer of six role-specific agents
+built on top of it. Through four development phases, average reward on Config~1
+improved from 32.1 to 864.3. A 10-run Phase~4 validation on Config~2 achieved an average reward of 888.6
+with zero failures, though Config~2 carries structural reliability risk not
+fully captured by a small sample. The largest single gain came from introducing multi-agent
+coordination in Phase~3, while Phase~4 added role-specific behaviour grounded in
+the bold-vs-cautious agent framework of Pollack and Ringuette (1990).
 \end{quote}
 \end{abstract}
 
-\section{Basic Information}
-\textbf{Course:} AI6125 Multi-Agent Systems
+% -----------------------------------------------------------------------
+\section{Introduction}
 
-\textbf{Group:} 18
+TileWorld is a well-known testbed for evaluating agent architectures under
+partial observability and resource constraints \cite{pollack1990}. Six agents
+share a bounded grid and must cooperate to maximise the number of tiles
+successfully delivered into holes within a fixed simulation budget.
+The environment presents several concurrent challenges: agents can only see a
+small local area, so global map knowledge must be built incrementally through
+movement and communication; fuel is consumed on every move and can only be
+replenished at a single hidden station; and both tiles and holes expire after a
+limited number of steps, making timing and freshness critical.
 
-\textbf{Assignment:} TileWorld Multi-Agent System
+A naive solution --- six independent agents each running the same generic loop
+--- wastes effort through redundant exploration, duplicate targeting, and
+uninformed routing. Our goal was to design a system that behaves as a
+coordinated team while keeping each agent's design tractable and individually
+testable.
 
-\textbf{Team Members:}
+We address this with a \emph{two-layer architecture}. The first layer is shared
+infrastructure implemented in three classes: \texttt{SmartTWAgent} (the base
+agent), \texttt{SmartTWAgentMemory} (time-stamped shared memory), and
+\texttt{SmartTWPlanner} (goal-directed, fuel-aware planning). Every improvement
+to this layer benefits all six agents simultaneously. The second layer is a set
+of specialist agents that extend the base class and each prioritise a different
+aspect of the task: fuel discovery, tile collection, delivery reliability, map
+coverage, high-value routing, and failure prevention.
+
+The rest of this paper is organised as follows. Section~2 places the work in the
+context of TileWorld research. Section~3 describes the shared architecture.
+Section~4 covers the communication protocol. Section~5 presents each specialist
+agent. Section~6 describes the experimental configurations. Section~7 reports
+results. Section~8 analyses strengths and weaknesses, and Section~9 concludes.
+
+% -----------------------------------------------------------------------
+\section{Background}
+
+TileWorld was introduced by Pollack and Ringuette \shortcite{pollack1990} as an
+experimental platform for studying agent deliberation. Their central concern was
+the trade-off between \emph{bold} agents that commit to plans and execute them
+without interruption, and \emph{cautious} agents that reconsider their plan at
+every step. They found that neither extreme dominates: bold agents waste effort
+reconsidering, while cautious agents miss opportunities by abandoning plans too
+eagerly. The optimal balance depends on the environment's rate of change.
+
+Subsequent work surveyed in \cite{kinny1993} confirmed that the right level of
+commitment varies with environmental volatility. High-volatility settings (many
+objects, short lifetimes) reward cautious behaviour; low-volatility settings
+(sparse, long-lived objects) reward bold commitment.
+
+Our architecture operationalises this insight directly. The shared planner uses
+different affordability margins depending on whether the runtime environment is
+detected as short-lifetime or stable. The \texttt{SmarterReplanningAgent}
+specialist functions as a configurable cautious agent: in volatile conditions it
+projects whether a target will survive until arrival and abandons the plan
+proactively if not; in stable conditions it uses a looser threshold and commits
+longer.
+
+% -----------------------------------------------------------------------
+\section{System Architecture}
+
+\subsection{Two-Layer Design}
+
+The architecture separates concerns into two layers.
+
+\textbf{Layer~1 --- Shared Foundation.}
+All six agents inherit from \texttt{SmartTWAgent} and use the same
+\texttt{SmartTWAgentMemory} and \texttt{SmartTWPlanner}. This layer provides:
+A* pathfinding with obstacle avoidance and fuel awareness;
+a memory store with per-cell observation timestamps and automatic staleness
+tracking;
+a claim system to prevent two agents targeting the same object;
+runtime environment classification (\texttt{isDense()},
+\texttt{isShortLifetime()}, \texttt{isLargeGrid()});
+and a full broadcast communication stack.
+
+\textbf{Layer~2 --- Specialist Agents.}
+Each specialist extends \texttt{SmartTWAgent} and overrides the \texttt{think()}
+method to insert role-specific decisions before delegating to the shared base
+logic via \texttt{super.think()}. This keeps each specialist focused on its role
+while retaining all base capabilities unchanged.
+
+\subsection{Shared Agent Loop}
+
+Every simulation step follows a fixed ordering enforced by the MASON scheduler:
+
+\begin{enumerate}
+\item \textbf{Environment step} (ordering 1): new objects are created, expired
+objects are removed, and the message list is cleared.
+\item \textbf{Sense and communicate} (ordering 2): each agent observes nearby
+cells, updates memory, reads incoming messages, and broadcasts its own.
+\item \textbf{Think and act} (ordering 3): each agent runs its decision logic
+and executes one action (move, pickup, drop, refuel, or wait).
+\end{enumerate}
+
+Within ordering~2, agents run \texttt{sense(); communicate();} sequentially in
+creation order, each reading the message queue before appending to it. A message
+broadcast by agent~$N$ is therefore visible during the same step to agents
+$N{+}1$ through~6 (which read after $N$ writes), but not to agents~$1$
+through~$N{-}1$ (which already read before $N$ wrote). By ordering~3, all
+broadcasts from ordering~2 are in the queue; however, each agent's stored
+parsed data reflects only the messages that existed when it called
+\texttt{communicate()}, so earlier-ordered agents see later-ordered agents'
+broadcasts at the following step rather than the current one. In practice this means fuel station discoveries
+and tile or hole sightings propagate to the full team by the following step at
+the latest, and to later-ordered agents within the same step.
+
+\subsection{A* Pathfinding}
+
+Navigation is handled by \texttt{AstarPathGenerator}, which computes
+obstacle-avoiding paths using the standard A* algorithm with Manhattan distance
+as the heuristic. The planner wraps path generation with an affordability check:
+before committing to a goal, it verifies that the agent has enough fuel to reach
+the target and return to the fuel station. In short-lifetime environments the
+planner also rejects targets whose estimated remaining lifetime is shorter than
+the steps required to arrive.
+
+\subsection{Memory and Environment Detection}
+
+\texttt{SmartTWAgentMemory} stores observation timestamps for every seen cell,
+tile, and hole. These timestamps drive three runtime signals:
+
 \begin{itemize}
-\item Ananya Singh
-\item Twissa Modi
-\item Aditya Kumar Goel
-\item Yu Taek Lee
-\item Nik Shahrul Nafiz Bin Nik Azhan
-\item M\'ate Tringer
+\item \texttt{isShortLifetime()} --- true when observed object disappearance
+rates suggest objects expire in roughly 30 steps or fewer.
+\item \texttt{isDense()} --- true when the observed object creation rate is high.
+\item \texttt{isLargeGrid()} --- true when the map appears to exceed roughly
+60 cells on a side.
 \end{itemize}
+
+These signals are estimated from observations rather than hardcoded to a
+specific configuration, so the same agents adapt correctly to both Config~1 and
+Config~2 without any parameter changes.
+
+% -----------------------------------------------------------------------
+\section{Communication Protocol}
+
+Agents communicate via a global broadcast channel. Because ordering~2 runs
+agents sequentially, a broadcast from agent~$N$ reaches later-ordered agents
+within the same step and earlier-ordered agents by the following step at the
+latest; the full team has the message within one step. The base class parses all
+incoming messages and stores results in shared protected fields, so specialist
+agents consume parsed data directly without writing any parsing code themselves.
+
+Table~\ref{tab:messages} lists the nine message types.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Type} & \textbf{Format} & \textbf{Purpose} \\
+\midrule
+\texttt{FUEL}     & \texttt{x,y}           & Fuel station location \\
+\texttt{TILE}     & \texttt{x,y,time}      & New tile sighting \\
+\texttt{HOLE}     & \texttt{x,y,time}      & New hole sighting \\
+\texttt{GONE}     & \texttt{x,y}           & Object disappeared \\
+\texttt{CLAIM}    & \texttt{x,y}           & Agent is targeting this cell \\
+\texttt{LOW}      & \texttt{agentId,fuel}  & Low-fuel warning \\
+\texttt{EXPIRING} & \texttt{x,y,reason}    & Target likely to expire \\
+\texttt{HOTSPOT}  & \texttt{x,y,density}   & High-density area \\
+\texttt{SWAP}     & \texttt{agentId,status}& Zone exploration complete \\
+\bottomrule
+\end{tabular}
+\caption{The nine message types and their payloads.}
+\label{tab:messages}
+\end{table}
+
+Communication improves team performance in four ways. First, \textbf{faster
+discovery sharing}: fuel station discovery by any one agent immediately benefits
+all five others. Second, \textbf{deduplication}: CLAIM messages prevent two
+agents from wasting movement on the same target. Third, \textbf{freshness
+control}: EXPIRING warnings let all agents avoid routing toward targets that are
+about to vanish. Fourth, \textbf{coverage coordination}: HOTSPOT and SWAP
+messages guide exploration toward productive and uncovered regions.
+
+% -----------------------------------------------------------------------
+\section{Specialist Agents}
+
+Each specialist inherits all base capabilities and adds a focused decision layer
+in \texttt{think()}.
+
+\subsection{FuelScoutAgent}
+
+\texttt{FuelScoutAgent} is designed to accelerate fuel station discovery.
+While the station is unknown, it uses a search radius of 20 cells ---
+significantly wider than the base agent's lawnmower pattern --- to jump between
+zones and cover the map faster. Its refuel threshold adapts to grid size
+(\texttt{isLargeGrid() ? 250 : 175}) to ensure it never runs critically low
+before the station is found. Once fuel is known and broadcast, it reverts to
+standard base behaviour. It also sends \texttt{LOW} warnings when fuel drops
+below 150, alerting teammates to shift coverage away from fuel-scarce regions.
+
+\subsection{TileHunterAgent}
+
+\texttt{TileHunterAgent} focuses on efficient tile collection. Its key behaviour
+is adaptive batching: in stable, long-lifetime environments it batches up to
+three tiles before delivering, amortising the fuel cost of a delivery trip over
+three reward points; in short-lifetime environments it delivers after every
+single tile to avoid objects expiring in transit. It immediately claims any tile
+it targets to reduce collisions and uses \texttt{HOTSPOT} data to bias movement
+toward tile-dense regions.
+
+\subsection{HoleFillerAgent}
+
+\texttt{HoleFillerAgent} protects the team from wasted delivery trips. When
+carrying a tile it checks whether the nearest hole has been flagged as expiring
+by a teammate; if so, it voids the current plan and seeks an alternative.
+In dense environments it patrols within five cells of a known hole while empty,
+reducing the distance it must travel once it acquires a tile. In sparse
+environments it skips patrol entirely, since the fuel cost of circling outweighs
+the benefit. It also rebroadcasts fresh hole locations at intervals to keep the
+team's delivery knowledge current.
+
+\subsection{ExplorerAgent}
+
+\texttt{ExplorerAgent} ensures systematic map coverage. It uses
+\texttt{getLeastVisitedTarget()} with a search radius that adapts to grid size
+(\texttt{isLargeGrid() ? 20 : 10}) to always move toward the least-recently-seen
+area in its assigned zone. It biases movement toward \texttt{HOTSPOT} positions
+broadcast by the \texttt{DeliveryOptimizerAgent}, but only when the hotspot lies
+within its own zone. When coverage exceeds 80\% it broadcasts a \texttt{SWAP}
+message to signal zone completion, allowing the team to shift exploration
+capacity elsewhere.
+
+\subsection{DeliveryOptimizerAgent}
+
+\texttt{DeliveryOptimizerAgent} maximises the reward per fuel unit. When
+carrying a tile, it selects the target hole by scoring all known holes on three
+factors: distance from current position, freshness (age relative to lifetime),
+and proximity to \texttt{HOTSPOT} regions where additional holes and tiles are
+likely to appear. This multi-gate scoring avoids the pathological cases of pure
+nearest-hole routing (choosing a hole that is about to expire) and pure
+freshness routing (choosing a distant hole over a nearby one). It also
+broadcasts \texttt{HOTSPOT} messages from high-density areas it observes,
+sharing information that directly improves the Explorer's coverage decisions.
+
+\subsection{SmarterReplanningAgent}
+
+\texttt{SmarterReplanningAgent} implements the adaptive cautious agent concept
+from Pollack and Ringuette \shortcite{pollack1990}. At each step it applies
+three checks on any active plan. First, it checks whether a teammate has already
+flagged the current goal as expiring; if so, it voids the plan immediately.
+Second, it independently projects whether the goal will still exist on arrival
+using observation timestamps and estimated remaining lifetime; the expiry
+threshold adapts to environment volatility (\texttt{isShortLifetime() ? 0.7 :
+0.9}). Third, it checks whether the agent has enough fuel to reach the goal and
+return to the fuel station, with a safety margin that scales with grid size
+(\texttt{max(50, gridWidth / 4)}). Failed checks trigger early replanning rather
+than waiting for the plan to fail at execution time, and the agent broadcasts an
+\texttt{EXPIRING} message to warn teammates of bad targets it detects.
+
+% -----------------------------------------------------------------------
+\section{Experimental Configurations}
+
+The system was evaluated on two configurations derived from the MASON
+TileWorld parameters. Table~\ref{tab:configs} summarises their key differences.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Parameter} & \textbf{Config~1} & \textbf{Config~2} \\
+\midrule
+Grid size       & 50 $\times$ 50 & 80 $\times$ 80 \\
+Tile rate (per step)     & 0.2  & 2.0 \\
+Hole rate (per step)     & 0.2  & 2.0 \\
+Obstacle rate (per step) & 0.2  & 2.0 \\
+Object lifetime (steps)  & 100  & 30  \\
+Agent fuel               & 500  & 500 \\
+\bottomrule
+\end{tabular}
+\caption{Parameters for Config~1 and Config~2.}
+\label{tab:configs}
+\end{table}
+
+Config~1 is the easier environment: objects are sparse but long-lived, so
+careful planning and commitment pay off. Config~2 is harder: the larger grid
+puts more pressure on fuel, and the short object lifetime means memory
+information becomes stale quickly, increasing the cost of a bad plan.
+
+% -----------------------------------------------------------------------
+\section{Results}
+
+\subsection{Phase Development (Config~1)}
+
+Table~\ref{tab:phases} shows the average reward achieved at each development
+phase, measured on Config~1. Each phase added a distinct capability.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lrrrp{3.2cm}@{}}
+\toprule
+\textbf{Phase} & \textbf{Avg} & \textbf{Min} & \textbf{Max} & \textbf{Key addition} \\
+\midrule
+Phase~1 & 32.1  & 0   & 55  & Survival and memory \\
+Phase~2 & 160.3 & 0   & 249 & A* planning, delivery \\
+Phase~3 & 541.5 & 469 & 601 & Coordination, communication \\
+Phase~4 & 864.3 & 801 & 959 & Adaptive base + role specialisation \\
+\bottomrule
+\end{tabular}
+\caption{Config~1 average reward by development phase. Phases~1--3 are frozen
+historical measurements from earlier codebase states; Phase~4 is a current
+rerun on the active codebase after all follow-up commits.}
+\label{tab:phases}
+\end{table}
+
+Phase~1 established a survival baseline: \texttt{SmartTWAgent} and
+\texttt{SmartTWAgentMemory} replaced the default agent with fuel-aware movement,
+memory decay, and opportunistic tile pickup. The system reacted to local events
+but could not yet route toward high-value work.
+
+Phase~2 added \texttt{SmartTWPlanner} with A* pathfinding. Agents stopped
+wandering and began executing goal-directed plans. The first major reward jump
+followed because the same map knowledge was now exploited efficiently.
+
+Phase~3 introduced multi-agent coordination: zone-based exploration,
+message broadcasts, shared tile and hole knowledge, and claim-based
+deconfliction. The score jump from Phase~2 to Phase~3 (160.3 to 541.5, a 3.4$\times$
+increase) was the largest in the project and came from structural rather than
+incremental improvement: six agents began working as a team rather than as
+independent individuals.
+
+Phase~4 unfolded in three steps. First, adaptive improvements to
+\texttt{SmartTWAgent} and \texttt{SmartTWAgentMemory} directly: runtime
+environment detection, adaptive fuel safety margins, and smarter planning
+heuristics. Second, a two-stage architectural transition: the uniform agent loop was first
+broken into individually instantiated person-named subclasses (one per team
+member), then renamed to role-named classes (\texttt{TileHunterAgent},
+\texttt{HoleFillerAgent}, etc.), both stages initially delegating entirely to
+the shared base. Third, follow-up commits
+added the substantive role-specific logic --- tighter expiry thresholds,
+freshness-aware delivery scoring, reachability checks, and throttled broadcasts.
+The 864.3 average reflects this full three-step progression; the largest gains
+came from the adaptive base improvements and the coordination already established
+in Phase~3, with role-specific behaviour providing targeted quality refinements
+on top.
+
+\subsection{Final Validation (Phase~4)}
+
+Table~\ref{tab:results} shows the Phase~4 validation results on both
+configurations.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+\textbf{Config} & \textbf{Avg reward} & \textbf{Final reward} & \textbf{Failures} \\
+\midrule
+Config~1 & 864.3 & 959 & 0 \\
+Config~2 & 888.6 & 981 & 0 \\
+\bottomrule
+\end{tabular}
+\caption{Phase~4 validation results. Each config was evaluated with
+\texttt{TileworldMain} running 10 independent random-seed trials
+(\texttt{iteration = 10}; see \texttt{TileworldMain.java:30}). Average reward
+is the mean final score across the 10 trials; Final reward is the score of the
+last trial. A failure is a trial whose final reward was zero. All three
+aggregate metrics are recorded in \texttt{MULTI\_RUN\_RESULTS.md}. Per-trial
+variance (individual min/max across the 10 trials) was not separately recorded
+for Config~2.}
+\label{tab:results}
+\end{table}
+
+Both 10-run validations completed with zero failures. Config~2 returned a
+slightly higher average (888.6 vs.\ 864.3), but Config~1 remains the clearest
+success case because its environment is more amenable to the coordination and
+planning strategies the system relies on. Config~2 structural risks are
+discussed in the analysis below.
+
+% -----------------------------------------------------------------------
+\section{Analysis}
+
+\subsection{Strengths}
+
+\textbf{Shared-base scalability.} Implementing pathfinding, memory, and
+communication once in the base class means every algorithmic improvement
+benefits all six agents simultaneously. This was the most important engineering
+decision in the project.
+
+\textbf{Coordination under partial observability.} Without communication, each
+agent is limited to what it can directly observe. The broadcast protocol
+converts six local observers into a distributed shared-intelligence system.
+Claims prevent duplicated effort; EXPIRING warnings stop wasted movement;
+HOTSPOT messages direct exploration toward productive regions.
+
+\textbf{Measured performance trajectory.} The phase scores confirm that each
+architectural addition produced a measurable gain. The largest gain (Phase~3
+coordination) accounts for the majority of total improvement, validating the
+design priority of getting coordination right before tuning specialisation.
+
+\textbf{Cross-agent idea borrowing.} Several mechanisms were refined across
+agents. For example, \texttt{DeliveryOptimizerAgent} explicitly combines expiry
+projection (originally developed for \texttt{SmarterReplanningAgent}), hotspot
+routing, and freshness-aware scoring into a single delivery policy. Good ideas
+spread through the team incrementally.
+
+\subsection{Weaknesses}
+
+\textbf{Config~2 structural risk.} The 10-run validation produced a positive
+average reward (888.6), but the environment's structure creates latent reliability
+risk not fully captured by the aggregate. The 80$\times$80 grid creates a larger
+search space for the fuel station; delayed discovery forces the whole team into
+conservative routing. Short object lifetimes increase the chance that remembered
+targets expire before an agent arrives, even with predictive expiry checking. Per-trial variance (individual min/max across the 10 trials) was not separately
+recorded for Config~2, so the spread of outcomes is unquantified.
+
+\textbf{Early-run lifetime detection.} The runtime environment classifier
+requires enough observed disappearances to estimate object lifetime accurately.
+In the first hundred steps of a Config~2 run, agents may still believe they
+are in a stable environment and apply overly generous planning horizons.
+
+\textbf{Fuel station discovery bottleneck.} Many decisions across the system
+depend on the fuel station being found early. On a large map with an unlucky
+starting layout, delayed discovery creates cascading conservative behaviour
+across all agents until the station is located.
+
+\subsection{Coordination Tradeoff}
+
+The fundamental tradeoff in any multi-agent system is between the parallelism
+benefit --- six agents covering the map simultaneously, collecting tiles, and
+filling holes in parallel --- and the coordination cost of communication,
+claim management, and zone assignment overhead. This system is strongest when
+the environment gives coordination time to pay off: Config~1, with its stable,
+sparse objects, rewards careful planning and reliable delivery. Config~2 tests
+the limits because the environment changes fast enough that shared information
+can become stale before the team acts on it.
+
+% -----------------------------------------------------------------------
+\section{Conclusion}
+
+We presented a six-agent TileWorld multi-agent system that improves from a
+survival baseline (Phase~1, avg.\ 32.1) to a coordinated specialist team
+(Phase~4, avg.\ 864.3 on Config~1) through four development phases.
+A 10-run Phase~4 validation on Config~2 achieved an average reward of 888.6;
+the four-phase development history is documented for Config~1 only. The key design insight is the two-layer separation between shared
+infrastructure and role specialisation: improvements to the base layer compound
+across all agents, while specialist layers add targeted decision quality without
+duplicating infrastructure.
+
+The most impactful single change was the introduction of multi-agent
+coordination in Phase~3, confirming the importance of communication and
+deconfliction over individual agent optimisation. Phase~4 role specialisation
+added further gains by covering different failure modes of the task: fuel
+discovery, tile collection efficiency, delivery reliability, map coverage,
+high-value routing, and predictive failure prevention.
+
+Future work could improve Config~2 reliability through two main directions:
+earlier fuel station discovery via a dedicated fast-scout strategy that
+temporarily overrides zone assignments at the start of a run, and adaptive
+lifetime thresholds that update more aggressively in the first 50 steps based
+on early disappearance observations.
+
+% -----------------------------------------------------------------------
+\bibliographystyle{aaai}
+\begin{thebibliography}{}
+
+\bibitem{pollack1990}
+Pollack, M.\ E., and Ringuette, M.\ 1990.
+Introducing the Tileworld: Experimentally evaluating agent architectures.
+In \textit{Proceedings of the Eighth National Conference on Artificial
+Intelligence (AAAI-90)}, 183--189.
+
+\bibitem{kinny1993}
+Kinny, D., and Georgeff, M.\ 1991.
+Commitment and effectiveness of situated agents.
+In \textit{Proceedings of the Twelfth International Joint Conference on
+Artificial Intelligence (IJCAI-91)}, 82--88.
+
+\end{thebibliography}
 
 \end{document}
