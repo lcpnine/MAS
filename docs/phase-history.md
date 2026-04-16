@@ -51,9 +51,9 @@ This is the phase where the score jump became structural rather than incremental
 
 Phase 4 unfolded in three steps.
 
-The first was adaptive improvements to `SmartTWAgent` and `SmartTWAgentMemory` directly (`348fb1`, `72a943`, `5a58db`, `091d70`): runtime environment detection, adaptive fuel safety margins, and smarter planning heuristics.
+The first was adaptive improvements to `SmartTWAgent` and `SmartTWAgentMemory` directly (`348fb1`, `72a943`, `5a58db`): runtime environment detection, adaptive fuel safety margins, and smarter planning heuristics.
 
-The second was a two-stage architectural transition. `cd81f80` broke the uniform agent loop — previously six identical `SmartTWAgent` instances — into individually instantiated per-slot subclasses (person-named: `AdityaAgent`, `YutaekAgent`, etc.), each a thin wrapper with no overridden behavior. `d9cef11` then replaced those with role-named subclasses — `TileHunterAgent`, `HoleFillerAgent`, `FuelScoutAgent`, `DeliveryOptimizerAgent`, `ExplorerAgent`, and `SmarterReplanningAgent` — still mostly delegating to `super` at that point.
+The second was a two-stage architectural transition. `cd81f80` broke the uniform agent loop — previously six identical `SmartTWAgent` instances — into individually instantiated per-slot subclasses (person-named: `AdityaAgent`, `YutaekAgent`, etc.), each a thin wrapper with no overridden behavior. `091d70` added a further `SmartTWAgentMemory` improvement during this window. `d9cef11` then replaced those with role-named subclasses — `TileHunterAgent`, `HoleFillerAgent`, `FuelScoutAgent`, `DeliveryOptimizerAgent`, `ExplorerAgent`, and `SmarterReplanningAgent` — still mostly delegating to `super` at that point.
 
 The third step was where the actual role-specific behavior landed (`da869a4`, `f571aae`, `8e208cd`, `3b64708`, `e3a4a01`, `7b78fd`, `efe94e`): tighter expiry thresholds, freshness-aware delivery clustering, reachability checks on tile targets, adaptive hotspot distances, and throttled broadcasts. `SmartTWAgent` remained the shared execution base throughout; each subclass layered its specialisation on top.
 
