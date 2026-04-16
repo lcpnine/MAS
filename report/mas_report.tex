@@ -25,14 +25,13 @@
 /Title (TileWorld Multi-Agent System)
 /Author (Ananya Singh, Twissa Modi, Aditya Kumar Goel, Yu Taek Lee, Nik Shahrul Nafiz Bin Nik Azhan, Mate Tringer)}
 \setcounter{secnumdepth}{0}
+\setlength\titlebox{3.5in}
 
 \begin{document}
 
 \title{TileWorld Multi-Agent System}
 \author{
-AI6125 Multi-Agent Systems\\
-Group 18\\
-\and
+AI6125 Multi-Agent Systems \quad Group 18\\[4pt]
 Ananya Singh \quad Twissa Modi \quad Aditya Kumar Goel\\
 Yu Taek Lee \quad Nik Shahrul Nafiz Bin Nik Azhan \quad M\'ate Tringer
 }
@@ -203,7 +202,7 @@ agents consume parsed data directly without writing any parsing code themselves.
 
 Table~\ref{tab:messages} lists the nine message types.
 
-\begin{table}[h]
+\begin{table*}[t]
 \centering
 \small
 \begin{tabular}{@{}lll@{}}
@@ -223,7 +222,7 @@ Table~\ref{tab:messages} lists the nine message types.
 \end{tabular}
 \caption{The nine message types and their payloads.}
 \label{tab:messages}
-\end{table}
+\end{table*}
 
 Communication improves team performance in four ways. First, \textbf{faster
 discovery sharing}: fuel station discovery by any one agent immediately benefits
@@ -315,7 +314,7 @@ than waiting for the plan to fail at execution time, and the agent broadcasts an
 The system was evaluated on two configurations derived from the MASON
 TileWorld parameters. Table~\ref{tab:configs} summarises their key differences.
 
-\begin{table}[h]
+\begin{table*}[t]
 \centering
 \small
 \begin{tabular}{@{}lcc@{}}
@@ -332,7 +331,7 @@ Agent fuel               & 500  & 500 \\
 \end{tabular}
 \caption{Parameters for Config~1 and Config~2.}
 \label{tab:configs}
-\end{table}
+\end{table*}
 
 Config~1 is the easier environment: objects are sparse but long-lived, so
 careful planning and commitment pay off. Config~2 is harder: the larger grid
