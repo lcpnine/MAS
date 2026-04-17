@@ -5,6 +5,7 @@
 \usepackage[T1]{fontenc}
 \usepackage{booktabs}
 \usepackage{microtype}
+\usepackage{amsmath}
 \usepackage{graphicx}
 \frenchspacing
 \setlength{\pdfpagewidth}{8.5in}
@@ -23,16 +24,15 @@
      {\endlist}
 \makeatother
 \pdfinfo{
-/Title (TileWorld Multi-Agent System)
+/Title (Tileworld Multi-Agent System)
 /Author (Ananya Singh, Twissa Modi, Aditya Kumar Goel, Yu Taek Lee, Nik Shahrul Nafiz Bin Nik Azhan, Mate Tringer)}
 \setcounter{secnumdepth}{0}
 \setlength\titlebox{3.5in}
 
 \begin{document}
 
-\title{TileWorld Multi-Agent System}
-\author{
-AI6125 Multi-Agent Systems \quad Group 18\\[4pt]
+\title{AI6125 Multi-Agent Systems - Tileworld Multi-Agent System}
+\author{Group 18\\[4pt]
 Ananya Singh \quad Twissa Modi \quad Aditya Kumar Goel\\
 Yu Taek Lee \quad Nik Shahrul Nafiz Bin Nik Azhan \quad M\'at\'e Tringer
 }
@@ -238,24 +238,67 @@ below 150, alerting teammates to shift coverage away from fuel-scarce regions.
 
 \subsection{TileHunterAgent}
 
-\texttt{TileHunterAgent} focuses on efficient tile collection. Its key behaviour
-is adaptive batching: in stable, long-lifetime environments it batches up to
+\texttt{TileHunterAgent} focuses on efficient tile collection through adaptive
+batching and conflict-free claiming. Its primary behavioural parameter is the
+tile target: in stable, long-lifetime environments (Config 1) it batches up to
 three tiles before delivering, amortising the fuel cost of a delivery trip over
-three reward points; in short-lifetime environments it delivers after every
-single tile to avoid objects expiring in transit. It immediately claims any tile
-it targets to reduce collisions and uses \texttt{HOTSPOT} data to bias movement
-toward tile-dense regions.
+three reward points; in short-lifetime environments (Config 2) it delivers after
+every single tile to avoid holes expiring while it is still collecting. This adaptive strategy is necessary, if we perform batching in a volatile environment we risk the agent arriving at
+a hole that no longer exists, while delivering one tile at a time in a stable
+environment wastes fuel on unnecessary round trips.
+
+To maximise efficiency, when a tile target is identified, \texttt{TileHunterAgent} immediately claims it
+in shared memory before moving, ensuring no teammate independently selects the
+same target and duplicates the trip. Before committing to any target, it also
+applies a reachability check via \texttt{isReachableBeforeExpiry()}, comparing
+the Manhattan distance to the target against its remaining lifetime using
+environment-adaptive thresholds (0.65 for short-lifetime, 0.85 for
+long-lifetime environments). This prevents the agent from chasing tiles or holes
+that were observed earlier in memory but are unlikely to still exist on arrival.
+The thresholds were tightened from an earlier 0.7/0.9 configuration after
+observing that agents were committing to targets near the end of their lifetime
+and arriving to find them gone.
+
+When no viable tile is known in memory, the agent does not fall back immediately
+to a blind lawnmower sweep. Instead, it first checks for \texttt{HOTSPOT}
+broadcasts from the \texttt{DeliveryOptimizerAgent} and navigates toward the
+nearest known tile-dense cluster. This biases exploration toward productive
+regions of the grid. Only if no hotspot is known does it revert to the base
+agent's systematic lawnmower exploration pattern.
 
 \subsection{HoleFillerAgent}
 
-\texttt{HoleFillerAgent} protects the team from wasted delivery trips. When
-carrying a tile it checks whether the nearest hole has been flagged as expiring
-by a teammate; if so, it voids the current plan and seeks an alternative.
-In dense environments it patrols within five cells of a known hole while empty,
-reducing the distance it must travel once it acquires a tile. In sparse
-environments it skips patrol entirely, since the fuel cost of circling outweighs
-the benefit. It also rebroadcasts fresh hole locations at intervals to keep the
-team's delivery knowledge current.
+\texttt{HoleFillerAgent} serves a dual role: it is both a delivery agent and a
+team-wide warning system against wasted trips. Before committing to any hole, it
+runs two sequential validity checks. First, it consults the shared
+\texttt{expiringTargets} list populated by teammate \texttt{EXPIRING} broadcasts;
+if the candidate hole appears on this list, the plan is voided immediately and
+the agent seeks an alternative. Second, it independently projects whether the
+hole will still exist on arrival by comparing the Manhattan distance to the
+target against the hole's remaining lifetime (current time minus observation
+timestamp subtracted from the total configured lifetime). The threshold applied
+to this projection adapts to environment volatility: 0.65 in short-lifetime
+environments and 0.85 in long-lifetime ones. If the projected travel cost
+exceeds the threshold fraction of remaining lifetime, the hole is considered
+unreachable and the plan is abandoned.
+
+Critically, when \texttt{HoleFillerAgent} detects an imminent expiry through its
+own projection, it does not simply replan silently. It broadcasts an
+\texttt{EXPIRING} message to the entire team, ensuring that any other agent
+currently committed to the same hole also voids its plan simultaneously. This
+propagation prevents scenarios where multiple agents independently arrive at the
+same expired location, each having wasted the fuel for the trip.
+
+To maintain team-wide hole awareness beyond individual sensor ranges,
+\texttt{HoleFillerAgent} periodically rebroadcasts known hole positions from its
+memory. The rebroadcast interval is adaptive: every 10 simulation steps in
+short-lifetime environments (Config 2) and every 15 steps in long-lifetime
+environments (Config 1). The freshness (age penalty) cutoff applied before rebroadcasting is
+equally adaptive, only holes younger than 0.5$\times$ their total lifetime
+are rebroadcast in volatile environments, and 0.7$\times$ in stable ones. This
+ensures that teammates receive only actionable hole information rather than stale
+entries that are unlikely to still exist, reducing noise in the shared message
+channel.
 
 \subsection{ExplorerAgent}
 
@@ -270,30 +313,93 @@ capacity elsewhere.
 
 \subsection{DeliveryOptimizerAgent}
 
-\texttt{DeliveryOptimizerAgent} maximises the reward per fuel unit. When
-carrying a tile, it selects the target hole by scoring all known holes on three
-factors: distance from current position, freshness (age relative to lifetime),
-and proximity to \texttt{HOTSPOT} regions where additional holes and tiles are
-likely to appear. This multi-gate scoring avoids the pathological cases of pure
-nearest-hole routing (choosing a hole that is about to expire) and pure
-freshness routing (choosing a distant hole over a nearby one). It also
-broadcasts \texttt{HOTSPOT} messages from high-density areas it observes,
-sharing information that directly improves the Explorer's coverage decisions.
+\texttt{DeliveryOptimizerAgent} maximises reward per fuel unit by replacing
+simple nearest-hole routing with a composite scoring function and structured
+decision cascade. Its \texttt{think()} method implements seven sequential gates,
+from fuel emergency handling through tile hunting, en-route batching, delivery,
+and hotspot navigation, with each gate only activating if higher-priority
+conditions are unmet.
+
+When selecting a delivery target, the agent scores all known unclaimed holes
+using the following function:
+
+\begin{equation}
+\text{score}(h) = d(a, h) - w_b \cdot \text{bonus}(h) + w_f \cdot
+\frac{\text{age}(h)}{\text{lifetime}}
+\end{equation}
+
+\noindent where $d(a, h)$ is the Manhattan distance from the agent to hole $h$,
+$\text{bonus}(h)$ is a tile proximity bonus computed as the sum of
+$1/(1 + d(h, t))$ over all tiles $t$ within a cluster radius of $h$, and
+$\text{age}(h)/\text{lifetime}$ is the fractional age of the hole penalising
+stale targets. The weights $w_b$ (bonus weight) and cluster radius adapt to
+environment density: 4.5 and 8 cells in dense environments, 1.5 and 12 cells in
+sparse ones. The freshness penalty weight $w_f$ was reduced from 15.0 to 10.0
+after observing that the original value over-penalised slightly older but
+perfectly reachable nearby holes, pushing the agent toward distant fresh targets
+unnecessarily. The dual-threshold expiry projection already filters truly
+unreachable holes, so the freshness penalty serves only as a soft preference
+rather than a hard filter.
+
+Before scoring, each candidate hole is validated against \texttt{EXPIRING}
+broadcasts, arrival-time projection (thresholds 0.65/0.85), and fuel round-trip
+affordability. Holes failing any check are excluded from scoring entirely.
+
+When carrying tiles but below the delivery threshold, the agent performs en-route
+batching: it identifies tiles whose collection adds at most a configurable detour
+budget beyond the direct path to the target hole. The budget is 2 steps in
+short-lifetime environments and 4 steps in long-lifetime ones, ensuring the
+agent never risks a hole expiring by taking too large a detour.
+
+To prevent goal oscillation, where an agent switches targets every step as
+scores fluctuate, the agent commits to a selected hole for a number of steps
+proportional to the distance to that target, bounded between a minimum of 6 and
+a maximum of 18 steps. The commitment is released early only if an
+\texttt{EXPIRING} signal is received for the committed target or fuel becomes
+critical.
+
+Moreover, \texttt{DeliveryOptimizerAgent} acts as the team's dedicated
+\texttt{HOTSPOT} broadcaster. It groups all remembered tiles into $7 \times 7$
+spatial clusters, computes a centroid and density for each cluster containing at
+least two tiles, and broadcasts the two densest clusters as \texttt{HOTSPOT}
+messages. To reduce channel noise, broadcasts are throttled to once every five
+simulation steps.
 
 \subsection{SmarterReplanningAgent}
 
-\texttt{SmarterReplanningAgent} implements the adaptive cautious agent concept
-from Pollack and Ringuette \shortcite{pollack1990}. At each step it applies
-three checks on any active plan. First, it checks whether a teammate has already
-flagged the current goal as expiring; if so, it voids the plan immediately.
-Second, it independently projects whether the goal will still exist on arrival
-using observation timestamps and estimated remaining lifetime; the expiry
-threshold adapts to environment volatility (\texttt{isShortLifetime() ? 0.7 :
-0.9}). Third, it checks whether the agent has enough fuel to reach the goal and
-return to the fuel station, with a safety margin that scales with grid size
-(\texttt{max(50, gridWidth / 4)}). Failed checks trigger early replanning rather
-than waiting for the plan to fail at execution time, and the agent broadcasts an
-\texttt{EXPIRING} message to warn teammates of bad targets it detects.
+
+\texttt{SmarterReplanningAgent} acts as the system's reliability expert by implementing the adaptive cautious agent concept from \shortcite{pollack1990}, applying predictive plan validation before any movement is executed. At each step, before acting on its current plan, it runs three sequential checks on the active goal.
+
+The first check consults the shared \texttt{expiringTargets} list. If any
+teammate has already broadcast an \texttt{EXPIRING} signal for the current goal,
+the plan is aborted immediately without further computation, since the target has
+already been identified as unreachable by another agent, avoiding redundancy.
+
+The second check is an independent arrival-time projection. The agent computes
+the Manhattan distance to the goal and compares it against the goal's estimated
+remaining lifetime derived from its observation timestamp. The expiry threshold
+adapts to environment volatility: 0.65 in short-lifetime environments (Config 2)
+and 0.85 in long-lifetime ones (Config 1). These thresholds were tightened from
+an original 0.7/0.9 configuration to trigger earlier plan abandonment, which
+proved especially important in Config 2 where targets expire within 30 steps. If
+the check fails, the agent broadcasts an \texttt{EXPIRING} warning before
+replanning, propagating the detection to teammates who may be pursuing the same
+goal.
+
+The third check verifies fuel round-trip affordability. The agent estimates the
+total fuel cost of reaching the goal and returning to the known fuel station,
+adding a safety margin that scales with grid size (\texttt{max(50, gridWidth /
+4)}). If current fuel falls below this estimate, the plan is voided and the
+agent navigates directly to the fuel station, prioritising survival over the
+current delivery. This check prevents the failure mode observed in earlier
+versions, where agents would commit to a distant goal, run out of fuel mid-path,
+and contribute nothing for the remainder of the simulation.
+
+The agent then executes its planned move only if all three checks pass. This
+conservative posture trades some aggressiveness, the agent will abandon goals
+that a less cautious agent might successfully complete for reliability,
+virtually eliminating fuel deaths from over-commitment and reducing the number
+of wasted trips the team collectively makes to expired targets.
 
 % -----------------------------------------------------------------------
 \section{Experimental Configurations}
