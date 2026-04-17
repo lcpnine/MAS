@@ -5,6 +5,7 @@
 \usepackage[T1]{fontenc}
 \usepackage{booktabs}
 \usepackage{microtype}
+\usepackage{graphicx}
 \frenchspacing
 \setlength{\pdfpagewidth}{8.5in}
 \setlength{\pdfpageheight}{11in}
@@ -33,62 +34,48 @@
 \author{
 AI6125 Multi-Agent Systems \quad Group 18\\[4pt]
 Ananya Singh \quad Twissa Modi \quad Aditya Kumar Goel\\
-Yu Taek Lee \quad Nik Shahrul Nafiz Bin Nik Azhan \quad M\'ate Tringer
+Yu Taek Lee \quad Nik Shahrul Nafiz Bin Nik Azhan \quad M\'at\'e Tringer
 }
 \maketitle
 
 \begin{abstract}
 \begin{quote}
-We present a six-agent multi-agent system built for the TileWorld simulation
-using the MASON framework. TileWorld is a challenging benchmark in which agents
-must explore a partially observable grid, discover a hidden fuel station, collect
-tiles, and fill holes to earn reward --- all under tight fuel constraints and with
-objects that expire after a limited lifetime. Our approach uses a two-layer
-architecture: a shared infrastructure layer that provides A* pathfinding,
-fuel-aware planning, memory with observation timestamps, and a broadcast
-communication protocol, plus a specialisation layer of six role-specific agents
-built on top of it. Through four development phases, average reward on Config~1
-improved from 32.1 to 864.3. A 10-run Phase~4 validation on Config~2 achieved an average reward of 888.6
-with zero failures, though Config~2 carries structural reliability risk not
-fully captured by a small sample. The largest single gain came from introducing multi-agent
-coordination in Phase~3, while Phase~4 added role-specific behaviour grounded in
-the bold-vs-cautious agent framework of Pollack and Ringuette (1990).
+In this report we present a six agent system designed for the TileWorld simulation using the MASON framework. In this multi agent benchmarking simulation agents need to work together to explore a partially observable grid, fetch and deliver limited-lifetime tiles while also discovering the initially hidden fuel station. Our approach uses a two-layer architecture with a shared basis including A* pathfinding, fuel-aware planning, memory, and communication protocol; and a specialization layer with a specific role assigned to each agent. Throughout our development phase, our average reward in Config~1 improved from 32.1 to 864.3 and an average reward of 888.6 in Config~2 (for validation) with zero failures, despite the elevated challenges in Config~2. The largest recorded gain came from introducing multi-agent coordination in Phase~3 of our development, while Phase~4 further improved our scores with the introduction of role-specific behavior grounded in the bold-vs-cautious agent framework of Pollack and Ringuette (1990).
 \end{quote}
 \end{abstract}
 
 % -----------------------------------------------------------------------
 \section{Introduction}
+The Tile World simulation a famous testing environment for agent architectures under resource 
+constraints with partial observability \cite{pollack1990}. In this environmnet six agents are 
+placed in a bounded grid to cooperate and earn rewards from picking up tiles and delivering them 
+to holes within a fixed lenght experiment. 
 
-TileWorld is a well-known testbed for evaluating agent architectures under
-partial observability and resource constraints \cite{pollack1990}. Six agents
-share a bounded grid and must cooperate to maximise the number of tiles
-successfully delivered into holes within a fixed simulation budget.
-The environment presents several concurrent challenges: agents can only see a
-small local area, so global map knowledge must be built incrementally through
-movement and communication; fuel is consumed on every move and can only be
-replenished at a single hidden station; and both tiles and holes expire after a
-limited number of steps, making timing and freshness critical.
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.75\columnwidth]{TileWorld.png}
+  \caption{The TileWorld simulation environment.}
+  \label{fig:tileworld}
+\end{figure}
 
-A naive solution --- six independent agents each running the same generic loop
---- wastes effort through redundant exploration, duplicate targeting, and
-uninformed routing. Our goal was to design a system that behaves as a
-coordinated team while keeping each agent's design tractable and individually
-testable.
+This environment is particullarly challanging because the agents can only see a  predifined local
+ area around them while both tiles and holes expiring after a limited number of steps, making timing 
+ and up-to-date global information critical. Agent are also subject to a constraint of fuel usage, 
+ as every step drains their tank, that can only be refilled at a single (initially hidden) fuelstation. 
 
-We address this with a \emph{two-layer architecture}. The first layer is shared
-infrastructure implemented in three classes: \texttt{SmartTWAgent} (the base
-agent), \texttt{SmartTWAgentMemory} (time-stamped shared memory), and
-\texttt{SmartTWPlanner} (goal-directed, fuel-aware planning). Every improvement
-to this layer benefits all six agents simultaneously. The second layer is a set
-of specialist agents that extend the base class and each prioritise a different
-aspect of the task: fuel discovery, tile collection, delivery reliability, map
-coverage, high-value routing, and failure prevention.
+Based on these constraints it is easy to see how a naive approach - with six independent agents each 
+running the same generic loop - is sub-optimal as it wastes effort through redundant exploration, duplicate 
+targeting, and identical routing. Thus, our goal was to engineer a complex agent architecture, communication
+ and planning protocol to make the six agent behave like a coordinated team while keeping each agent's 
+ design tractable and individually testable.
 
-The rest of this paper is organised as follows. Section~2 places the work in the
-context of TileWorld research. Section~3 describes the shared architecture.
-Section~4 covers the communication protocol. Section~5 presents each specialist
-agent. Section~6 describes the experimental configurations. Section~7 reports
-results. Section~8 analyses strengths and weaknesses, and Section~9 concludes.
+Our solution consists of a \emph{two-layer architecture}. The base layer is shared among all the agents 
+with three implemented classes \texttt{SmartTWAgent} (the base agent), \texttt{SmartTWAgentMemory} 
+(time-stamped shared memory), and \texttt{SmartTWPlanner} (goal-directed, fuel-aware planning). 
+This is then complemented with a role specific layer, to make six specialised agents, with different 
+priorities: fuel discovery, tile collection, delivery reliability, map coverage, high-value routing, 
+and failure prevention.
+
 
 % -----------------------------------------------------------------------
 \section{Background}
@@ -513,6 +500,14 @@ lifetime thresholds that update more aggressively in the first 50 steps based
 on early disappearance observations.
 
 % -----------------------------------------------------------------------
+\section{Disclosure on the use of AI}
+
+Through our this project Gemini 3.1 and Claude 4.6 Sonnet were used to correct grammatical and phrasing errors, and format the citations. Claude 4.6 Sonnet was also used to help with coding related tasks, especially with Java . Other than this, no AI system was used during the preparation of this report, and it mirrors the group's understanding of the concepts presented. 
+
+% -----------------------------------------------------------------------
+
+
+
 \bibliographystyle{aaai}
 \begin{thebibliography}{}
 
