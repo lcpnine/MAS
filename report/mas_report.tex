@@ -27,7 +27,7 @@
 /Title (Tileworld Multi-Agent System)
 /Author (Ananya Singh, Twissa Modi, Aditya Kumar Goel, Yu Taek Lee, Nik Shahrul Nafiz Bin Nik Azhan, Mate Tringer)}
 \setcounter{secnumdepth}{0}
-\setlength\titlebox{3.5in}
+\setlength\titlebox{1.5in}
 
 \begin{document}
 
@@ -218,20 +218,53 @@ messages guide exploration toward productive and uncovered regions.
 
 % -----------------------------------------------------------------------
 \section{Specialist Agents}
-
-Each specialist inherits all base capabilities and adds a focused decision layer
-in \texttt{think()}.
+Each specialized agent receives access to all global resources from the base 
+infrastructure --- A*, Planning, Memory, and Broadcast --- and adds an additional 
+decision-making layer at the top of the \texttt{think()} loop that is specific to 
+its assigned role. Within each specialization, execution follows three levels of 
+priority. First, \texttt{fuelSafetyOverride()} is executed to perform fuel-related 
+actions whenever necessary. Next, \texttt{opportunisticAction()} is triggered to 
+identify opportunities to pick up or drop an item at zero cost. If the agent is 
+standing on a tile or hole at the beginning of its turn, one of these actions will 
+be performed. After \texttt{opportunisticAction()} has executed, each specialized 
+agent uses the remainder of its turn to carry out its own role-specific game logic.
 
 \subsection{FuelScoutAgent}
+\texttt{FuelScoutAgent} was designed to resolve the greatest risk in early gameplay, 
+which is the fueling station never being discovered during this time frame. Therefore, the team members are forced to use an extremely conservative routing strategy, such as limiting their ability to explore.
 
-\texttt{FuelScoutAgent} is designed to accelerate fuel station discovery.
-While the station is unknown, it uses a search radius of 20 cells ---
-significantly wider than the base agent's lawnmower pattern --- to jump between
-zones and cover the map faster. Its refuel threshold adapts to grid size
-(\texttt{isLargeGrid() ? 250 : 175}) to ensure it never runs critically low
-before the station is found. Once fuel is known and broadcast, it reverts to
-standard base behaviour. It also sends \texttt{LOW} warnings when fuel drops
-below 150, alerting teammates to shift coverage away from fuel-scarce regions.
+Upon start-up, the \texttt{FuelScoutAgent} moves towards the center of the map. This 
+choice of moving towards the center is done intentionally to allow for maximum sensor coverage in each of the four directions, thus providing the largest opportunity for early detection. Once the agent reaches the center of the map, it changes to a commit-based Least Visited Search algorithm with a radius of up to 20 cells. As the fuel level decreases, the effective radius will scale downward 
+(\texttt{effectiveRadius = MAX\_EXPLORE\_RADIUS * fuelFraction}). Therefore, as the 
+agent's margins decrease, it will become more conservative in its actions. The 
+commitment length can be adjusted between 8 and 24 steps depending upon how far the 
+agent is from its target, reducing thrashing due to constantly changing target 
+locations. The fuel floor is dynamically computed as \texttt{xDim + yDim + 
+safetyBuffer}, representing the worst-case travel distance rather than a hardcoded 
+value.
+
+Once the station has been located and announced, if the fuel level is below 60\% the 
+agent will refuel and fall through to \texttt{super.think()}, acting as a 
+general-purpose helper for the rest of the simulation. During the search phase, it 
+also broadcasts \texttt{LOW} warnings whenever fuel drops below $1.2 \times$ 
+\texttt{baseFloor}, throttled to no more than once every 4 steps, enabling teammates 
+to route away from fuel-scarce regions.
+
+
+\subsection{ExplorerAgent}
+The purpose of the \texttt{ExplorerAgent} is to ensure the map is uniformly explored 
+through six vertical strips along the x-axis of the map. When the 
+\texttt{ExplorerAgent} initializes, each agent is assigned one zone of responsibility, thereby avoiding redundant exploration of the same region by multiple agents.
+
+To perform efficient pathfinding within its zone, the agent utilizes \texttt{getLeastVisitedTarget()} with a varying radius depending on whether it is 
+running on a large or small grid (\texttt{isLargeGrid() ? 20 : 10}) to find the most 
+outdated observation timestamp, essentially the area it has not visited for the 
+longest time.
+
+In addition to timestamp-driven navigation, if there are any \texttt{HOTSPOT}s in the agent's zone beyond a certain threshold (either 15 or 8 depending on grid size), it will utilize \texttt{HOTSPOT} positioning. However, these thresholds are used to 
+prevent the agent from leaving its zone for distant hotspots.
+
+Once an agent reaches 80\% coverage of its zone, as determined by the number of cells within the agent's zone that have been visited during the current simulation cycle, it sends out a \texttt{SWAP} message indicating completion of its zone. At this point, it ceases to use \texttt{ExplorerAgent} behaviour and defaults to base agent behaviour, collecting and delivering tiles for the remainder of the simulation.
 
 \subsection{TileHunterAgent}
 
@@ -296,17 +329,6 @@ are rebroadcast in volatile environments, and 0.7$\times$ in stable ones. This
 ensures that teammates receive only actionable hole information rather than stale
 entries that are unlikely to still exist, reducing noise in the shared message
 channel.
-
-\subsection{ExplorerAgent}
-
-\texttt{ExplorerAgent} ensures systematic map coverage. It uses
-\texttt{getLeastVisitedTarget()} with a search radius that adapts to grid size
-(\texttt{isLargeGrid() ? 20 : 10}) to always move toward the least-recently-seen
-area in its assigned zone. It biases movement toward \texttt{HOTSPOT} positions
-broadcast by the \texttt{DeliveryOptimizerAgent}, but only when the hotspot lies
-within its own zone. When coverage exceeds 80\% it broadcasts a \texttt{SWAP}
-message to signal zone completion, allowing the team to shift exploration
-capacity elsewhere.
 
 \subsection{DeliveryOptimizerAgent}
 
