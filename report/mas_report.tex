@@ -80,26 +80,23 @@ and failure prevention.
 % -----------------------------------------------------------------------
 \section{Background}
 
-TileWorld was introduced by Pollack and Ringuette \shortcite{pollack1990} as an
-experimental platform for studying agent deliberation. Their central concern was
-the trade-off between \emph{bold} agents that commit to plans and execute them
-without interruption, and \emph{cautious} agents that reconsider their plan at
-every step. They found that neither extreme dominates: bold agents waste effort
-reconsidering, while cautious agents miss opportunities by abandoning plans too
-eagerly. The optimal balance depends on the environment's rate of change.
+The TileWorld simulation was introduced by Pollack and Ringuette \shortcite{pollack1990} 
+to provide an experimental to study agent deliberation. Their main objective was to see 
+what the trade-off is between \emph{bold} agents that commit to plans and execute them 
+sequentially without interruption, and \emph{cautious} agents that iteratively reconsider 
+their plan during execution. In their findings they concluded that neither extreme dominates 
+the other, and the optimal balance largely dependent on the rate of change in the environment. 
 
-Subsequent work surveyed in \cite{kinny1993} confirmed that the right level of
-commitment varies with environmental volatility. High-volatility settings (many
-objects, short lifetimes) reward cautious behaviour; low-volatility settings
-(sparse, long-lived objects) reward bold commitment.
+Subsequent work surveyed in \cite{kinny1993} confirmed that in high-volatility settings 
+(many objects and/or short lifetimes) cautious behaviour is advantageuous while in lower-volatility 
+environments (sparse, long-lived objects) the committed agent will yield to higher rewards.
 
-Our architecture operationalises this insight directly. The shared planner uses
-different affordability margins depending on whether the runtime environment is
-detected as short-lifetime or stable. The \texttt{SmarterReplanningAgent}
-specialist functions as a configurable cautious agent: in volatile conditions it
-projects whether a target will survive until arrival and abandons the plan
-proactively if not; in stable conditions it uses a looser threshold and commits
-longer.
+In our development we considered these inshights and within the shared layer we defined 
+parameters that depend on the volatility of the environment, that is detected on-the-fly. 
+We also introduced the \texttt{SmarterReplanningAgent} with specialist functions as a configurable 
+cautious agent: in higher-volatility conditions it calculates whether a target will survive until 
+arrival and decides to pursue that given target accordingly. In stable conditions it uses a looser
+ threshold and commits longer.
 
 % -----------------------------------------------------------------------
 \section{System Architecture}
